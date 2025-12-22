@@ -261,7 +261,7 @@ case_expression_pattern_variant_single_identifier ::= keyword_mut? identifier lo
 case_expression_pattern_variant_literal ::= literal
 case_expression_pattern_variant_expression ::= cmp_value
 case_expression_pattern_variant_else ::= keyword_else
-case_expression_pattern_variant_else_case ::= keyword_else keyword_case inner_scope_expression
+case_expression_pattern_variant_else_case ::= keyword_else case_expression
 case_expression_pattern_nested_for_destructure_array ::=
     case_expression_pattern_variant_destructure_skip_single_argument |
     case_expression_pattern_variant_destructure_skip_multiple_arguments |
