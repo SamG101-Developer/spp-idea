@@ -1,7 +1,7 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.samg101developer.sppidea</id>
-    <name>spp-idea</name>
+    <name>spp-lang</name>
     <vendor>samg101-developer</vendor>
 
     <depends>com.intellij.modules.platform</depends>
