@@ -1,0 +1,486 @@
+{
+    parserClass="com.intellij.lang.SppParser"
+    extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+    psiClassPrefix="Spp"
+    psiImplClassSuffix="Impl"
+    psiPackage="com.intellij.lang.psi"
+    psiImplPackage="com.intellij.lang.psi.impl"
+
+    elementTypeHolderClass="com.intellij.lang.psi.SppTypes"
+    elementTypeClass="com.intellij.lang.psi.SppElementType"
+    tokenTypeClass="com.intellij.lang.psi.SppTokenType"
+
+    tokens = [
+        line_comment = "regexp:#.*"
+        block_comment = "regexp:##[^#]*##"
+
+        lexeme_regex = "regexp:r\".*\""
+        lexeme_identifier = "regexp:[a-z][_a-zA-Z0-9]*"
+        lexeme_upper_identifier = "regexp:[A-Z][_a-zA-Z0-9]*"
+        lexeme_bin_digits = "regexp:0b[01]+"
+        lexeme_oct_digits = "regexp:0o[0-7]+"
+        lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
+        lexeme_dec_digits = "regexp:[0-9]+"
+        lexeme_single_quote_str = "regexp:'[^']*'"
+        lexeme_double_quote_str = "regexp:\"[^\"]*\""
+
+        token_left_curly_brace = "{"
+        token_right_curly_brace = "}"
+        token_left_square_bracket = "["
+        token_right_square_bracket = "]"
+        token_left_parenthesis = "("
+        token_right_parenthesis = ")"
+        token_colon = ":"
+        token_comma = ","
+        token_assign = "="
+        token_at = "@"
+        token_underscore = "_"
+        token_less_than = "<"
+        token_greater_than = ">"
+        token_add = "+"
+        token_sub = "-"
+        token_mul = "*"
+        token_div = "/"
+        token_rem = "%"
+        token_bit_ior = "|"
+        token_bit_xor = "^"
+        token_bit_and = "&"
+        token_dot = "."
+        token_question_mark = "?"
+        token_exclamation_mark = "!"
+        token_semicolon = ";"
+        token_single_quote = "'"
+        token_double_quote = '"'
+        token_dollar = "$"
+        token_arrow_right = "->"
+        token_double_dot = ".."
+        token_double_colon = "::"
+        token_double_exclamation_mark = "!!"
+        token_equals = "=="
+        token_not_equals = "!="
+        token_less_than_equals = "<="
+        token_greater_than_equals = ">="
+        token_add_assign = "+="
+        token_sub_assign = "-="
+        token_mul_assign = "*="
+        token_div_assign = "/="
+        token_rem_assign = "%="
+        token_pow = "**"
+        token_bit_shl = "<<"
+        token_bit_shr = ">>"
+        token_bit_ior_assign = "|="
+        token_bit_xor_assign = "^="
+        token_bit_and_assign = "&="
+        token_pow_assign = "**="
+        token_bit_shl_assign = "<<="
+        token_bit_shr_assign = ">>="
+        
+        keyword_cls = "cls"
+        keyword_fun = "fun"
+        keyword_cor = "cor"
+        keyword_sup = "sup"
+        keyword_ext = "ext"
+        keyword_mut = "mut"
+        keyword_use = "use"
+        keyword_cmp = "cmp"
+        keyword_let = "let"
+        keyword_type = "type"
+        keyword_self = "self"
+        keyword_case = "case"
+        keyword_iter = "iter"
+        keyword_of = "of"
+        keyword_loop = "loop"
+        keyword_in = "in"
+        keyword_else = "else"
+        keyword_gen = "gen"
+        keyword_with = "with"
+        keyword_ret = "ret"
+        keyword_exit = "exit"
+        keyword_skip = "skip"
+        keyword_is = "is"
+        keyword_as = "as"
+        keyword_or = "or"
+        keyword_and = "and"
+        keyword_not = "not"
+        keyword_async = "async"
+        keyword_true = "true"
+        keyword_false = "false"
+        keyword_res = "res"
+        keyword_caps = "caps"
+    ]
+}
+
+
+
+root ::= module_prototype <<eof>>
+
+module_prototype ::= module_implementation
+module_implementation ::= (module_member)*
+module_member ::= function_prototype | class_prototype | sup_prototype_extension | sup_prototype_functions | global_use_statement | global_type_statement | global_cmp_statement
+
+class_prototype ::= (annotation)* keyword_cls upper_identifier generic_parameter_group? class_implementation
+class_implementation ::= token_left_curly_brace (class_member)* token_right_curly_brace
+class_member ::= class_attribute
+class_attribute ::= (annotation)* identifier token_colon type_expression class_attribute_default_value?
+class_attribute_default_value ::= token_assign cmp_value
+
+sup_prototype_functions ::= keyword_sup generic_parameter_group? type_expression sup_implementation
+sup_prototype_extension ::= keyword_sup generic_parameter_group? type_expression keyword_ext type_expression sup_implementation
+sup_implementation ::= token_left_curly_brace (sup_member)* token_right_curly_brace
+sup_member ::= function_prototype | sup_type_statement | sup_cmp_statement
+sup_type_statement ::= (annotation)* type_statement
+sup_cmp_statement ::= (annotation)* cmp_statement
+
+function_prototype ::= subroutine_prototype | coroutine_prototype
+subroutine_prototype ::= (annotation)* keyword_fun identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
+coroutine_prototype ::= (annotation)* keyword_cor identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
+function_implementation ::= token_left_curly_brace (function_member)* token_right_curly_brace
+function_member ::= statement
+
+function_parameter_group ::= token_left_parenthesis (function_parameter (token_comma function_parameter)*)? token_right_parenthesis
+function_parameter ::= function_parameter_variadic | function_parameter_optional | function_parameter_required | function_parameter_self
+function_parameter_self ::= function_parameter_self_with_convention | function_parameter_self_without_convention
+function_parameter_self_with_convention ::= convention self_identifier
+function_parameter_self_without_convention ::= keyword_mut? self_identifier
+function_parameter_required ::= local_variable token_colon type_expression
+function_parameter_optional ::= local_variable token_colon type_expression token_assign cmp_value
+function_parameter_variadic ::= token_double_dot local_variable token_colon type_expression
+
+function_call_argument_group ::= token_left_parenthesis (function_call_argument (token_comma function_call_argument)*)? token_right_parenthesis
+function_call_argument ::= function_call_argument_keyword | function_call_argument_positional
+function_call_argument_positional ::= convention? token_double_dot? expression
+function_call_argument_keyword ::= identifier token_assign convention? expression
+
+generic_parameter_group ::= token_left_square_bracket (generic_parameter (token_comma generic_parameter)*)? token_right_square_bracket
+generic_parameter ::= generic_parameter_type | generic_parameter_comp
+generic_parameter_comp ::= generic_parameter_comp_variadic | generic_parameter_comp_optional | generic_parameter_comp_required
+generic_parameter_comp_required ::= keyword_cmp identifier token_colon type_expression
+generic_parameter_comp_optional ::= keyword_cmp identifier token_colon type_expression token_assign cmp_value
+generic_parameter_comp_variadic ::= keyword_cmp token_double_dot identifier token_colon type_expression
+generic_parameter_type ::= generic_parameter_type_variadic | generic_parameter_type_optional | generic_parameter_type_required
+generic_parameter_type_required ::= type_identifier generic_parameter_type_inline_constraints?
+generic_parameter_type_optional ::= type_identifier generic_parameter_type_inline_constraints? token_assign type_expression
+generic_parameter_type_variadic ::= token_double_dot type_identifier generic_parameter_type_inline_constraints?
+generic_parameter_type_inline_constraints ::= token_colon type_expression (token_bit_and type_expression)*
+
+generic_argument_group ::= token_left_square_bracket (generic_argument (token_comma generic_argument)*)? token_right_square_bracket
+generic_argument ::= generic_argument_type | generic_argument_comp
+generic_argument_comp ::= generic_argument_comp_keyword | generic_argument_comp_positional
+generic_argument_comp_positional ::= cmp_value
+generic_argument_comp_keyword ::= identifier token_assign cmp_value
+generic_argument_type ::= generic_argument_type_keyword | generic_argument_type_positional
+generic_argument_type_positional ::= type_expression
+generic_argument_type_keyword ::= upper_identifier token_assign type_expression
+
+annotation ::= token_at identifier
+
+expression ::= binary_expression_precedence_level_0
+binary_expression_precedence_level_0 ::= binary_expression_precedence_level_1 (binary_expression_op_precedence_level_0 binary_expression_precedence_level_0)*
+binary_expression_precedence_level_1 ::= binary_expression_precedence_level_2 (binary_expression_op_precedence_level_1 binary_expression_precedence_level_1)*
+binary_expression_precedence_level_2 ::= binary_expression_precedence_level_3 (binary_expression_op_precedence_level_2 binary_expression_precedence_level_2)*
+binary_expression_precedence_level_3 ::= binary_expression_precedence_level_4 (binary_expression_op_precedence_level_3 case_expression_pattern_variant_destructure)*
+binary_expression_precedence_level_4 ::= binary_expression_precedence_level_5 (binary_expression_op_precedence_level_4 binary_expression_precedence_level_4)*
+binary_expression_precedence_level_5 ::= binary_expression_precedence_level_6 (binary_expression_op_precedence_level_5 binary_expression_precedence_level_5)*
+binary_expression_precedence_level_6 ::= binary_expression_precedence_level_7 (binary_expression_op_precedence_level_6 binary_expression_precedence_level_6)*
+binary_expression_precedence_level_7 ::= binary_expression_precedence_level_8 (binary_expression_op_precedence_level_7 binary_expression_precedence_level_7)*
+binary_expression_precedence_level_8 ::= binary_expression_precedence_level_9 (binary_expression_op_precedence_level_8 binary_expression_precedence_level_8)*
+binary_expression_precedence_level_9 ::= binary_expression_precedence_level_10 (binary_expression_op_precedence_level_9 binary_expression_precedence_level_9)*
+binary_expression_precedence_level_10 ::= unary_expression (binary_expression_op_precedence_level_10 binary_expression_precedence_level_10)*
+binary_expression_op_precedence_level_0 ::= token_bit_ior_assign | token_bit_xor_assign | token_bit_and_assign | token_bit_shl_assign | token_bit_shr_assign | token_add_assign | token_sub_assign | token_mul_assign | token_div_assign | token_rem_assign | token_pow_assign
+binary_expression_op_precedence_level_1 ::= keyword_or
+binary_expression_op_precedence_level_2 ::= keyword_and
+binary_expression_op_precedence_level_3 ::= keyword_is
+binary_expression_op_precedence_level_4 ::= token_equals | token_not_equals | token_less_than_equals | token_greater_than_equals | token_less_than | token_greater_than
+binary_expression_op_precedence_level_5 ::= token_bit_ior
+binary_expression_op_precedence_level_6 ::= token_bit_xor
+binary_expression_op_precedence_level_7 ::= token_bit_and
+binary_expression_op_precedence_level_8 ::= token_bit_shl | token_bit_shr
+binary_expression_op_precedence_level_9 ::= token_add | token_sub
+binary_expression_op_precedence_level_10 ::= token_mul | token_div | token_rem | token_pow
+
+unary_expression ::= unary_expression_op* postfix_expression
+unary_expression_op ::= unary_expression_op_async | unary_expression_op_deref
+unary_expression_op_async ::= keyword_async
+unary_expression_op_deref ::= token_mul
+
+postfix_expression ::= primary_expression postfix_expression_op*
+postfix_expression_op ::=
+    postfix_expression_op_early_return |
+    postfix_expression_op_function_call |
+    postfix_expression_op_runtime_member_access |
+    postfix_expression_op_static_member_access |
+    postfix_expression_op_keyword_not |
+    postfix_expression_op_keyword_res |
+    postfix_expression_op_index
+postfix_expression_op_early_return ::= token_question_mark
+postfix_expression_op_function_call ::= generic_argument_group? function_call_argument_group fold_expression?
+postfix_expression_op_runtime_member_access ::= token_dot (identifier | numeric_identifier)
+postfix_expression_op_static_member_access ::= token_double_colon identifier
+postfix_expression_op_keyword_not ::= token_dot keyword_not
+postfix_expression_op_keyword_res ::= token_dot keyword_res function_call_argument_group
+postfix_expression_op_index ::= token_left_square_bracket keyword_mut? expression token_right_square_bracket
+
+primary_expression ::=
+    closure_expression |
+    parenthesised_expression |
+    literal |
+    object_initializer |
+    case_of_expression |
+    case_expression |
+    loop_expression |
+    iter_of_expression |
+    gen_expression |
+    type_expression |
+    identifier |
+    self_identifier |
+    inner_scope_expression |
+    fold_expression
+parenthesised_expression ::= token_left_parenthesis expression token_right_parenthesis
+fold_expression ::= token_double_dot
+
+case_expression ::= keyword_case expression inner_scope_expression (case_expression_branch)*
+case_expression_branch ::= case_expression_branch_else_case | case_expression_branch_else
+case_expression_branch_else ::= case_expression_pattern_variant_else inner_scope_expression
+case_expression_branch_else_case ::= case_expression_pattern_variant_else_case
+case_of_expression ::= keyword_case expression keyword_of token_left_curly_brace (case_of_expression_branch)+ token_right_curly_brace
+case_of_expression_branch ::= case_of_expression_branch_destructuring | case_of_expression_branch_comparing | case_expression_branch_else_case | case_expression_branch_else
+case_of_expression_branch_destructuring ::= keyword_is case_expression_pattern_variant_destructure (token_comma case_expression_pattern_variant_destructure)* pattern_guard? inner_scope_expression
+case_of_expression_branch_comparing ::= boolean_comparison_op case_expression_pattern_variant_expression (token_comma case_expression_pattern_variant_expression)* pattern_guard? inner_scope_expression
+case_expression_pattern_variant_destructure ::=
+    case_expression_pattern_variant_destructure_array |
+    case_expression_pattern_variant_destructure_object |
+    case_expression_pattern_variant_destructure_tuple
+case_expression_pattern_variant_destructure_array ::= token_left_square_bracket (case_expression_pattern_nested_for_destructure_array (token_comma case_expression_pattern_nested_for_destructure_array)*)? token_right_square_bracket
+case_expression_pattern_variant_destructure_object ::= type_expression_simple token_left_parenthesis (case_expression_pattern_nested_for_destructure_object (token_comma case_expression_pattern_nested_for_destructure_object)*)? token_right_parenthesis
+case_expression_pattern_variant_destructure_tuple ::= token_left_parenthesis (case_expression_pattern_nested_for_destructure_tuple (token_comma case_expression_pattern_nested_for_destructure_tuple)*)? token_right_parenthesis
+case_expression_pattern_variant_destructure_skip_single_argument ::= token_underscore
+case_expression_pattern_variant_destructure_skip_multiple_arguments ::= token_double_dot
+case_expression_pattern_variant_destructure_attribute_binding ::= identifier token_assign case_expression_pattern_nested_for_attribute_binding
+case_expression_pattern_variant_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias?
+case_expression_pattern_variant_literal ::= literal
+case_expression_pattern_variant_expression ::= cmp_value
+case_expression_pattern_variant_else ::= keyword_else
+case_expression_pattern_variant_else_case ::= keyword_else keyword_case inner_scope_expression
+case_expression_pattern_nested_for_destructure_array ::=
+    case_expression_pattern_variant_destructure_skip_single_argument |
+    case_expression_pattern_variant_destructure_skip_multiple_arguments |
+    case_expression_pattern_variant_destructure_array |
+    case_expression_pattern_variant_destructure_object |
+    case_expression_pattern_variant_destructure_tuple |
+    case_expression_pattern_variant_single_identifier |
+    case_expression_pattern_variant_literal
+case_expression_pattern_nested_for_destructure_tuple ::=
+    case_expression_pattern_variant_destructure_skip_single_argument |
+    case_expression_pattern_variant_destructure_skip_multiple_arguments |
+    case_expression_pattern_variant_destructure_array |
+    case_expression_pattern_variant_destructure_object |
+    case_expression_pattern_variant_destructure_tuple |
+    case_expression_pattern_variant_single_identifier |
+    case_expression_pattern_variant_literal
+case_expression_pattern_nested_for_destructure_object ::=
+    case_expression_pattern_variant_destructure_skip_multiple_arguments |
+    case_expression_pattern_variant_destructure_attribute_binding |
+    case_expression_pattern_variant_single_identifier
+case_expression_pattern_nested_for_attribute_binding ::=
+    case_expression_pattern_variant_destructure_array |
+    case_expression_pattern_variant_destructure_object |
+    case_expression_pattern_variant_destructure_tuple |
+    case_expression_pattern_variant_literal
+pattern_guard ::= keyword_and expression
+boolean_comparison_op ::=
+    token_equals |
+    token_not_equals |
+    token_less_than_equals |
+    token_greater_than_equals |
+    token_less_than |
+    token_greater_than
+
+loop_expression ::= loop_iterable_expression | loop_conditional_expression
+loop_iterable_expression ::= keyword_loop local_variable keyword_in expression inner_scope_expression loop_else_statement?
+loop_conditional_expression ::= keyword_loop expression inner_scope_expression loop_else_statement?
+loop_else_statement ::= keyword_else inner_scope_expression
+
+iter_of_expression ::= keyword_iter expression keyword_of token_left_curly_brace (iter_of_expression_branch)+ token_right_curly_brace
+iter_of_expression_branch ::= iter_pattern_variant pattern_guard? inner_scope_expression
+iter_pattern_variant ::=
+    iter_pattern_variant_exception |
+    iter_pattern_variant_exhausted |
+    iter_pattern_variant_no_value |
+    iter_pattern_variant_variable |
+    iter_pattern_variant_else
+iter_pattern_variant_exception ::= token_exclamation_mark local_variable?
+iter_pattern_variant_exhausted ::= token_double_exclamation_mark
+iter_pattern_variant_no_value ::= token_underscore
+iter_pattern_variant_variable ::= local_variable
+iter_pattern_variant_else ::= keyword_else
+
+gen_expression ::=
+    gen_unroll_expression |
+    gen_expression_with_value |
+    gen_expression_without_value
+gen_expression_with_value ::= keyword_gen convention? expression
+gen_expression_without_value ::= keyword_gen
+gen_unroll_expression ::= keyword_gen keyword_with expression
+
+closure_expression ::= token_cor? closure_expression_parameter_and_capture_group expression
+closure_expression_parameter_and_capture_group ::= token_bit_ior closure_expression_parameter_group closure_expression_capture_group? token_bit_ior
+closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
+closure_expression_capture ::= convention? identifier
+closure_expression_parameter_group ::= token_left_parenthesis (closure_expression_parameter (token_comma closure_expression_parameter)*)? token_right_parenthesis
+closure_expression_parameter ::= function_parameter_variadic | function_parameter_optional | function_parameter_required
+
+object_initializer ::= type_expression_simple object_initializer_argument_group
+object_initializer_argument_group ::= token_left_parenthesis (object_initializer_argument (token_comma object_initializer_argument)*)? token_right_parenthesis
+object_initializer_argument ::= object_initializer_argument_keyword | object_initializer_argument_shorthand
+object_initializer_argument_keyword ::= identifier token_assign expression
+object_initializer_argument_shorthand ::= identifier
+
+statement ::= let_statement | assignment_statement | use_statement | cmp_statement | type_statement | ret_statement | exit_statement | skip_statement | expression
+let_statement ::= let_statement_initialized | let_statement_uninitialized
+let_statement_initialized ::= keyword_let local_variable let_statement_initialized_explicit_type? token_assign expression
+let_statement_initialized_explicit_type ::= token_colon type_expression
+let_statement_uninitialized ::= keyword_let local_variable token_colon type_expression
+
+assignment_statement ::= expression (token_comma expression)* token_assign expression (token_comma expression)*
+
+use_statement ::= keyword_use type_expression_simple
+cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign cmp_value
+type_statement ::= keyword_type upper_identifier generic_parameter_group? token_assign type_expression
+ret_statement ::= keyword_ret expression?
+
+exit_statement ::= exit_statement_with_skip | exit_statement_with_expr
+exit_statement_with_skip ::= keyword_exit+ keyword_skip
+exit_statement_with_expr ::= keyword_exit+ expression?
+skip_statement ::= keyword_skip
+
+local_variable ::= local_variable_destructure_array | local_variable_destructure_object | local_variable_destructure_tuple | local_variable_destructure_attribute_binding | local_variable_destructure_skip_single_argument | local_variable_destructure_skip_multiple_arguments | local_variable_single_identifier_alias | local_variable_single_identifier
+local_variable_destructure_array ::= token_left_square_bracket (local_variable_nested_for_destructure_array (token_comma local_variable_nested_for_destructure_array)*)? token_right_square_bracket
+local_variable_destructure_object ::= type_expression_simple token_left_parenthesis (local_variable_nested_for_destructure_object (token_comma local_variable_nested_for_destructure_object)*)? token_right_parenthesis
+local_variable_destructure_tuple ::= token_left_parenthesis (local_variable_nested_for_destructure_tuple (token_comma local_variable_nested_for_destructure_tuple)*)? token_right_parenthesis
+local_variable_destructure_skip_single_argument ::= token_underscore
+local_variable_destructure_skip_multiple_arguments ::= token_double_dot
+local_variable_destructure_attribute_binding ::= identifier token_assign local_variable_nested_for_attribute_binding
+local_variable_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias?
+local_variable_single_identifier_alias ::= keyword_as identifier
+local_variable_nested_for_destructure_array ::=
+    local_variable_destructure_skip_single_argument |
+    local_variable_destructure_skip_multiple_arguments |
+    local_variable_destructure_array |
+    local_variable_destructure_object |
+    local_variable_destructure_tuple |
+    local_variable_single_identifier
+local_variable_nested_for_destructure_tuple ::=
+    local_variable_destructure_skip_single_argument |
+    local_variable_destructure_skip_multiple_arguments |
+    local_variable_destructure_array |
+    local_variable_destructure_object |
+    local_variable_destructure_tuple |
+    local_variable_single_identifier
+local_variable_nested_for_destructure_object ::=
+    local_variable_destructure_skip_multiple_arguments |
+    local_variable_destructure_attribute_binding |
+    local_variable_single_identifier
+local_variable_nested_for_attribute_binding ::=
+    local_variable_destructure_array |
+    local_variable_destructure_object |
+    local_variable_destructure_tuple
+
+convention ::= convention_mut | convention_ref
+convention_mut ::= token_bit_and keyword_mut
+convention_ref ::= token_bit_and
+
+global_use_statement ::= annotation* use_statement
+global_type_statement ::= annotation* type_statement
+global_cmp_statement ::= annotation* cmp_statement
+
+inner_scope_expression ::= token_left_curly_brace (statement)* token_right_curly_brace
+
+type_expression ::= type_never | type_parenthesised_expression | type_array_shorthand | type_tuple_shorthand | type_binary_expression_precedence_level_0
+type_binary_expression_precedence_level_0 ::= type_binary_expression_precedence_level_1 (type_binary_expression_op_precedence_level_0 type_binary_expression_precedence_level_0)*
+type_binary_expression_precedence_level_1 ::= type_postfix_expression (type_binary_expression_op_precedence_level_1 type_binary_expression_precedence_level_1)*
+type_binary_expression_op_precedence_level_0 ::= keyword_or
+type_binary_expression_op_precedence_level_1 ::= keyword_and
+
+type_unary_expression ::= type_unary_expression_operator_borrow? type_unary_expression_op* type_identifier
+type_unary_expression_op ::= type_unary_expression_operator_namespace
+type_unary_expression_operator_borrow ::= convention
+type_unary_expression_operator_namespace ::= identifier token_double_colon
+type_unary_expression_simple ::= type_unary_expression_operator_namespace* type_identifier
+
+type_postfix_expression ::= type_unary_expression type_postfix_expression_op*
+type_postfix_expression_op ::= type_postfix_expression_operator_nested_type
+type_postfix_expression_operator_nested_type ::= token_double_colon type_identifier
+type_postfix_expression_simple ::= type_unary_expression_simple type_postfix_expression_op*
+
+type_identifier ::= upper_identifier generic_argument_group?
+type_never ::= token_exclamation_mark
+type_parenthesised_expression ::= token_left_parenthesis type_expression token_right_parenthesis
+type_tuple_shorthand ::=
+    type_tuple_shorthand_n_elements |
+    type_tuple_shorthand_1_element |
+    type_tuple_shorthand_0_elements
+type_tuple_shorthand_0_elements ::= token_left_parenthesis token_right_parenthesis
+type_tuple_shorthand_1_element ::= token_left_parenthesis type_expression token_comma token_right_parenthesis
+type_tuple_shorthand_n_elements ::= token_left_parenthesis (type_expression (token_comma type_expression)+) token_right_parenthesis
+type_array_shorthand ::= token_left_square_bracket type_expression token_semicolon cmp_value token_right_square_bracket
+type_expression_simple ::= type_postfix_expression_simple
+
+identifier ::= lexeme_identifier
+numeric_identifier ::= lexeme_dec_digits
+self_identifier ::= keyword_self
+upper_identifier ::= lexeme_upper_identifier
+
+literal ::=
+    literal_char |
+    literal_string |
+    literal_float |
+    literal_integer |
+    literal_boolean |
+    literal_tuple |
+    literal_array
+literal_char ::= lexeme_single_quote_str
+literal_string ::= lexeme_double_quote_str
+literal_float ::= literal_float_b10
+literal_integer ::=
+    literal_integer_b02 |
+    literal_integer_b08 |
+    literal_integer_b16 |
+    literal_integer_b10
+literal_boolean ::=
+    keyword_true |
+    keyword_false
+literal_tuple ::=
+    literal_tuple_1_element |
+    literal_tuple_n_elements
+literal_array ::= literal_array_explicit_elements | literal_array_repeated_element
+literal_float_b10 ::= numeric_prefix_op? lexeme_dec_digits token_dot lexeme_dec_digits float_suffix_type?
+literal_integer_b02 ::= numeric_prefix_op? lexeme_bin_digits integer_suffix_type?
+literal_integer_b08 ::= numeric_prefix_op? lexeme_oct_digits integer_suffix_type?
+literal_integer_b10 ::= numeric_prefix_op? lexeme_dec_digits integer_suffix_type?
+literal_integer_b16 ::= numeric_prefix_op? lexeme_hex_digits integer_suffix_type?
+numeric_prefix_op ::=
+    token_add |
+    token_sub
+float_suffix_type ::= token_underscore ('f8' | 'f16' | 'f32' | 'f64' | 'f128' | 'f256')
+integer_suffix_type ::= token_underscore ('s8' | 's16' | 's32' | 's64' | 's128' | 's256' | 'sz' | 'u8' | 'u16' | 'u32' | 'u64' | 'u128' | 'u256' | 'uz')
+
+literal_tuple_1_element ::= token_left_parenthesis expression token_comma token_right_parenthesis
+literal_tuple_n_elements ::= token_left_parenthesis expression (token_comma expression)+ token_right_parenthesis
+
+literal_array_repeated_element ::= token_left_square_bracket expression token_semicolon cmp_value token_right_square_bracket
+literal_array_explicit_elements ::= token_left_square_bracket (expression (token_comma expression)* token_right_square_bracket)
+
+cmp_value ::= literal_char | literal_string | literal_float | literal_integer | literal_boolean | cmp_literal_tuple | cmp_literal_array | cmp_object_initializer | identifier
+cmp_literal_tuple ::= cmp_literal_tuple_1_element | cmp_literal_tuple_n_elements
+cmp_literal_array ::= cmp_literal_array_explicit_elements | cmp_literal_array_repeated_element
+cmp_object_initializer ::= type_expression_simple cmp_object_initializer_argument_group
+cmp_object_initializer_argument_group ::= token_left_parenthesis (cmp_object_initializer_argument token_comma)* token_right_parenthesis
+cmp_object_initializer_argument ::= cmp_object_initializer_argument_keyword | object_initializer_argument_shorthand
+cmp_object_initializer_argument_keyword ::= identifier token_assign cmp_value
+
+cmp_literal_tuple_1_element ::= token_left_parenthesis cmp_value token_comma token_right_parenthesis
+cmp_literal_tuple_n_elements ::= token_left_parenthesis cmp_value (token_comma cmp_value)+ token_right_parenthesis
+
+cmp_literal_array_repeated_element ::= token_left_square_bracket cmp_value token_semicolon cmp_value token_right_square_bracket
+cmp_literal_array_explicit_elements ::= token_left_square_bracket (cmp_value (token_comma cmp_value)* token_right_square_bracket)

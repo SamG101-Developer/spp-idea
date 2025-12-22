@@ -19,6 +19,13 @@ kotlin {
     jvmToolchain(21)
 }
 
+// Set the source sets used to build the project.
+sourceSets {
+    main {
+        java.srcDirs("src/main/gen")
+    }
+}
+
 // Configure project's dependencies
 repositories {
     mavenCentral()
@@ -99,7 +106,8 @@ intellijPlatform {
         // The pluginVersion is based on the SemVer (https://semver.org) and supports pre-release labels, like 2.1.7-alpha.3
         // Specify pre-release label to publish the plugin in a custom Release Channel automatically. Read more:
         // https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html#specifying-a-release-channel
-        channels = providers.gradleProperty("pluginVersion").map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
+        channels = providers.gradleProperty("pluginVersion")
+            .map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
     }
 
     pluginVerification {
