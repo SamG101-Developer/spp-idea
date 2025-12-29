@@ -354,7 +354,7 @@ exit_statement_with_skip ::= keyword_exit+ keyword_skip
 exit_statement_with_expr ::= keyword_exit+ expression?
 skip_statement ::= keyword_skip
 
-local_variable ::= local_variable_destructure_array | local_variable_destructure_object | local_variable_destructure_tuple | local_variable_destructure_attribute_binding | local_variable_destructure_skip_single_argument | local_variable_destructure_skip_multiple_arguments | local_variable_single_identifier_alias | local_variable_single_identifier
+local_variable ::= local_variable_destructure_array | local_variable_destructure_object | local_variable_destructure_tuple | local_variable_single_identifier
 local_variable_destructure_array ::= token_left_square_bracket (local_variable_nested_for_destructure_array (token_comma local_variable_nested_for_destructure_array)*)? token_right_square_bracket
 local_variable_destructure_object ::= type_expression_simple token_left_parenthesis (local_variable_nested_for_destructure_object (token_comma local_variable_nested_for_destructure_object)*)? token_right_parenthesis
 local_variable_destructure_tuple ::= token_left_parenthesis (local_variable_nested_for_destructure_tuple (token_comma local_variable_nested_for_destructure_tuple)*)? token_right_parenthesis
@@ -469,7 +469,7 @@ literal_tuple_1_element ::= token_left_parenthesis expression token_comma token_
 literal_tuple_n_elements ::= token_left_parenthesis expression (token_comma expression)+ token_right_parenthesis
 
 literal_array_repeated_element ::= token_left_square_bracket expression token_semicolon cmp_value token_right_square_bracket
-literal_array_explicit_elements ::= token_left_square_bracket (expression (token_comma expression)* token_right_square_bracket)
+literal_array_explicit_elements ::= token_left_square_bracket expression (token_comma expression)* token_right_square_bracket
 
 cmp_value ::= literal_char | literal_string | literal_float | literal_integer | literal_boolean | cmp_literal_tuple | cmp_literal_array | cmp_object_initializer | identifier
 cmp_literal_tuple ::= cmp_literal_tuple_1_element | cmp_literal_tuple_n_elements
