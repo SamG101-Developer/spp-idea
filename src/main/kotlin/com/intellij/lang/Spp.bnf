@@ -327,7 +327,7 @@ closure_expression ::= token_cor? closure_expression_parameter_and_capture_group
 closure_expression_parameter_and_capture_group ::= token_bit_ior closure_expression_parameter_group closure_expression_capture_group? token_bit_ior
 closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
 closure_expression_capture ::= convention? identifier
-closure_expression_parameter_group ::= token_left_parenthesis (closure_expression_parameter (token_comma closure_expression_parameter)*)? token_right_parenthesis
+closure_expression_parameter_group ::= (closure_expression_parameter (token_comma closure_expression_parameter)*)?
 closure_expression_parameter ::= function_parameter_variadic | function_parameter_optional | function_parameter_required
 
 object_initializer ::= type_expression_simple object_initializer_argument_group
