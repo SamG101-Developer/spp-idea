@@ -326,7 +326,7 @@ gen_unroll_expression ::= keyword_gen keyword_with expression
 closure_expression ::= token_cor? closure_expression_parameter_and_capture_group expression
 closure_expression_parameter_and_capture_group ::= token_bit_ior closure_expression_parameter_group closure_expression_capture_group? token_bit_ior
 closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
-closure_expression_capture ::= convention? identifier
+closure_expression_capture ::= convention? (identifier | self_identifier)
 closure_expression_parameter_group ::= (closure_expression_parameter (token_comma closure_expression_parameter)*)?
 closure_expression_parameter ::= function_parameter_variadic | function_parameter_optional | function_parameter_required
 
@@ -471,7 +471,7 @@ literal_tuple_n_elements ::= token_left_parenthesis expression (token_comma expr
 literal_array_repeated_element ::= token_left_square_bracket expression token_semicolon cmp_value token_right_square_bracket
 literal_array_explicit_elements ::= token_left_square_bracket expression (token_comma expression)* token_right_square_bracket
 
-cmp_value ::= closure_expression | literal_char | literal_string | literal_float | literal_integer | literal_boolean | cmp_literal_tuple | cmp_literal_array | cmp_object_initializer | identifier
+cmp_value ::= literal_char | literal_string | literal_float | literal_integer | literal_boolean | cmp_literal_tuple | cmp_literal_array | cmp_object_initializer | identifier
 cmp_literal_tuple ::= cmp_literal_tuple_1_element | cmp_literal_tuple_n_elements
 cmp_literal_array ::= cmp_literal_array_explicit_elements | cmp_literal_array_repeated_element
 cmp_object_initializer ::= type_expression_simple cmp_object_initializer_argument_group
