@@ -93,6 +93,7 @@ interface SppTokenSets {
             SppTypes.TOKEN_QUESTION_MARK,
             SppTypes.TOKEN_EXCLAMATION_MARK,
             SppTypes.TOKEN_DOUBLE_EXCLAMATION_MARK,
+            SppTypes.TOKEN_AT
         )
 
         val BRACKETS: TokenSet = TokenSet.create(

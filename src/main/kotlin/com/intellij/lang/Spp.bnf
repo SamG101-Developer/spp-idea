@@ -200,12 +200,12 @@ binary_expression_op_precedence_level_9 ::= token_add | token_sub
 binary_expression_op_precedence_level_10 ::= token_mul | token_div | token_rem | token_pow
 
 unary_expression ::= unary_expression_op* postfix_expression
-unary_expression_op ::= unary_expression_op_async | unary_expression_op_deref
+unary_expression_op ::= unary_expression_op_async
 unary_expression_op_async ::= keyword_async
-unary_expression_op_deref ::= token_mul
 
 postfix_expression ::= primary_expression postfix_expression_op*
 postfix_expression_op ::=
+    postfix_expression_op_deref |
     postfix_expression_op_early_return |
     postfix_expression_op_function_call |
     postfix_expression_op_runtime_member_access |
@@ -213,6 +213,7 @@ postfix_expression_op ::=
     postfix_expression_op_keyword_not |
     postfix_expression_op_keyword_res |
     postfix_expression_op_index
+postfix_expression_op_deref ::= token_at
 postfix_expression_op_early_return ::= token_question_mark
 postfix_expression_op_function_call ::= generic_argument_group? function_call_argument_group fold_expression?
 postfix_expression_op_runtime_member_access ::= token_dot (identifier | numeric_identifier)
@@ -342,7 +343,16 @@ let_statement_initialized ::= keyword_let local_variable let_statement_initializ
 let_statement_initialized_explicit_type ::= token_colon type_expression
 let_statement_uninitialized ::= keyword_let local_variable token_colon type_expression
 
-assignment_statement ::= expression (token_comma expression)* token_assign expression (token_comma expression)*
+assignment_statement ::= assignment_target (token_comma assignment_target)* token_assign expression (token_comma expression)*
+assignment_target ::= assignment_target_postfix_expression
+assignment_target_postfix_expression ::= assignment_target_primary_expression assignment_target_postfix_expression_op*
+assignment_target_postfix_expression_op ::=
+    postfix_expression_op_deref |
+    postfix_expression_op_function_call
+    postfix_expression_op_static_member_access |
+    postfix_expression_op_runtime_member_access |
+    postfix_expression_op_index
+assignment_target_primary_expression ::= identifier | self_identifier
 
 use_statement ::= keyword_use type_expression_simple
 cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign cmp_value
