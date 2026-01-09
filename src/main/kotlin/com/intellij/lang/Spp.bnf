@@ -88,7 +88,6 @@
         keyword_type = "type"
         keyword_self = "self"
         keyword_case = "case"
-        keyword_iter = "iter"
         keyword_of = "of"
         keyword_loop = "loop"
         keyword_in = "in"
@@ -106,7 +105,6 @@
         keyword_async = "async"
         keyword_true = "true"
         keyword_false = "false"
-        keyword_res = "res"
         keyword_caps = "caps"
     ]
 }
@@ -211,7 +209,6 @@ postfix_expression_op ::=
     postfix_expression_op_runtime_member_access |
     postfix_expression_op_static_member_access |
     postfix_expression_op_keyword_not |
-    postfix_expression_op_keyword_res |
     postfix_expression_op_index
 postfix_expression_op_deref ::= token_at
 postfix_expression_op_early_return ::= token_question_mark
@@ -219,7 +216,6 @@ postfix_expression_op_function_call ::= generic_argument_group? function_call_ar
 postfix_expression_op_runtime_member_access ::= token_dot (identifier | numeric_identifier)
 postfix_expression_op_static_member_access ::= token_double_colon identifier
 postfix_expression_op_keyword_not ::= token_dot keyword_not
-postfix_expression_op_keyword_res ::= token_dot keyword_res function_call_argument_group
 postfix_expression_op_index ::= token_left_square_bracket keyword_mut? expression token_right_square_bracket
 
 primary_expression ::=
@@ -230,7 +226,6 @@ primary_expression ::=
     case_of_expression |
     case_expression |
     loop_expression |
-    iter_of_expression |
     gen_expression |
     type_expression |
     identifier |
@@ -258,7 +253,9 @@ case_expression_pattern_variant_destructure_tuple ::= token_left_parenthesis (ca
 case_expression_pattern_variant_destructure_skip_single_argument ::= token_underscore
 case_expression_pattern_variant_destructure_skip_multiple_arguments ::= token_double_dot
 case_expression_pattern_variant_destructure_attribute_binding ::= identifier token_assign case_expression_pattern_nested_for_attribute_binding
-case_expression_pattern_variant_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias?
+case_expression_pattern_variant_single_identifier ::= case_expression_pattern_variant_single_identifier_without_convention | case_expression_pattern_variant_single_identifier_with_convention
+case_expression_pattern_variant_single_identifier_without_convention ::= keyword_mut? identifier local_variable_single_identifier_alias?
+case_expression_pattern_variant_single_identifier_with_convention ::= convention identifier local_variable_single_identifier_alias?
 case_expression_pattern_variant_literal ::= literal
 case_expression_pattern_variant_expression ::= expression
 case_expression_pattern_variant_else ::= keyword_else
@@ -301,20 +298,6 @@ loop_expression ::= loop_iterable_expression | loop_conditional_expression
 loop_iterable_expression ::= keyword_loop local_variable keyword_in expression inner_scope_expression loop_else_statement?
 loop_conditional_expression ::= keyword_loop expression inner_scope_expression loop_else_statement?
 loop_else_statement ::= keyword_else inner_scope_expression
-
-iter_of_expression ::= keyword_iter expression keyword_of token_left_curly_brace (iter_of_expression_branch)+ token_right_curly_brace
-iter_of_expression_branch ::= iter_pattern_variant pattern_guard? inner_scope_expression
-iter_pattern_variant ::=
-    iter_pattern_variant_exception |
-    iter_pattern_variant_exhausted |
-    iter_pattern_variant_no_value |
-    iter_pattern_variant_variable |
-    iter_pattern_variant_else
-iter_pattern_variant_exception ::= token_exclamation_mark local_variable?
-iter_pattern_variant_exhausted ::= token_double_exclamation_mark
-iter_pattern_variant_no_value ::= token_underscore
-iter_pattern_variant_variable ::= local_variable
-iter_pattern_variant_else ::= keyword_else
 
 gen_expression ::=
     gen_unroll_expression |
@@ -416,7 +399,7 @@ type_unary_expression ::= type_unary_expression_operator_borrow? type_unary_expr
 type_unary_expression_op ::= type_unary_expression_operator_namespace
 type_unary_expression_operator_borrow ::= convention
 type_unary_expression_operator_namespace ::= identifier token_double_colon
-type_unary_expression_simple ::= type_unary_expression_operator_namespace* type_identifier
+type_unary_expression_simple ::= type_unary_expression_operator_borrow? type_unary_expression_op* type_identifier
 
 type_postfix_expression ::= type_unary_expression type_postfix_expression_op*
 type_postfix_expression_op ::= type_postfix_expression_operator_nested_type

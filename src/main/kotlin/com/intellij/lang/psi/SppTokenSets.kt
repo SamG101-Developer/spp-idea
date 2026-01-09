@@ -36,7 +36,6 @@ interface SppTokenSets {
             SppTypes.KEYWORD_TYPE,
             SppTypes.KEYWORD_SELF,
             SppTypes.KEYWORD_CASE,
-            SppTypes.KEYWORD_ITER,
             SppTypes.KEYWORD_OF,
             SppTypes.KEYWORD_LOOP,
             SppTypes.KEYWORD_IN,
@@ -54,7 +53,6 @@ interface SppTokenSets {
             SppTypes.KEYWORD_ASYNC,
             SppTypes.KEYWORD_TRUE,
             SppTypes.KEYWORD_FALSE,
-            SppTypes.KEYWORD_RES,
             SppTypes.KEYWORD_CAPS
         )
 
