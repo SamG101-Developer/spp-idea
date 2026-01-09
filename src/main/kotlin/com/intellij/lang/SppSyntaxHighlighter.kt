@@ -29,7 +29,7 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
         val BRACKET: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_BRACKET", DefaultLanguageHighlighterColors.BRACKETS)
         val ATTRIBUTE: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_ATTRIBUTE", DefaultLanguageHighlighterColors.IDENTIFIER)
+            TextAttributesKey.createTextAttributesKey("SPP_ATTRIBUTE", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
         val ANNOTATION: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_ANNOTATION", DefaultLanguageHighlighterColors.METADATA)
 
@@ -39,12 +39,9 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
         val TYPE_IDENTIFIER_KEYS: Array<TextAttributesKey> = arrayOf(TYPE_IDENTIFIER)
         val KEYWORD_KEYS: Array<TextAttributesKey> = arrayOf(KEYWORD)
         val NUMBER_KEYS: Array<TextAttributesKey> = arrayOf(NUMBER)
-        val STRING_KEYS: Array<TextAttributesKey> = arrayOf(STRING)
         val COMMENT_KEYS: Array<TextAttributesKey> = arrayOf(COMMENT)
         val OPERATOR_KEYS: Array<TextAttributesKey> = arrayOf(OPERATOR)
         val BRACKET_KEYS: Array<TextAttributesKey> = arrayOf(BRACKET)
-        val ATTRIBUTE_KEYS: Array<TextAttributesKey> = arrayOf(ATTRIBUTE)
-        val ANNOTATION_KEYS: Array<TextAttributesKey> = arrayOf(ANNOTATION)
     }
 
     constructor() : super()
@@ -57,7 +54,6 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
         return when (tokenType) {
             in SppTokenSets.KEYWORDS -> KEYWORD_KEYS
             in SppTokenSets.NUMBERS -> NUMBER_KEYS
-            in SppTokenSets.STRINGS -> STRING_KEYS
             in SppTokenSets.COMMENTS -> COMMENT_KEYS
             in SppTokenSets.OPERATORS -> OPERATOR_KEYS
             in SppTokenSets.BRACKETS -> BRACKET_KEYS

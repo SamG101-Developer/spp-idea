@@ -16,6 +16,8 @@
         <fileType name="S++ File" language="S++" implementationClass="com.intellij.lang.SppFileType" fieldName="INSTANCE" extensions="spp"/>
         <lang.parserDefinition language="S++" implementationClass="com.intellij.lang.SppParserDefinition"/>
         <lang.syntaxHighlighterFactory language="S++" implementationClass="com.intellij.lang.SppSyntaxHighlighterFactory"/>
+        <lang.braceMatcher language="S++" implementationClass="com.intellij.lang.SppBraceMatcher"/>
         <annotator language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
+        <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
     </extensions>
 </idea-plugin>
