@@ -164,3 +164,8 @@ intellijPlatformTesting {
         }
     }
 }
+
+
+tasks.jar {
+    enabled = true
+}

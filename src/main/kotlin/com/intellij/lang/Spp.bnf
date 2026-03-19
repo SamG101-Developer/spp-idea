@@ -115,13 +115,21 @@ root ::= module_prototype <<eof>>
 
 module_prototype ::= module_implementation
 module_implementation ::= (module_member)*
-module_member ::= function_prototype | class_prototype | sup_prototype_extension | sup_prototype_functions | global_use_statement | global_type_statement | global_cmp_statement
+module_member ::=
+    function_prototype |
+    class_prototype |
+    sup_prototype_extension |
+    sup_prototype_functions |
+    global_use_statement |
+    global_use_var_statement |
+    global_type_statement |
+    global_cmp_statement
 
 class_prototype ::= (annotation)* keyword_cls upper_identifier generic_parameter_group? class_implementation
 class_implementation ::= token_left_curly_brace (class_member)* token_right_curly_brace
 class_member ::= class_attribute
 class_attribute ::= (annotation)* identifier token_colon type_expression class_attribute_default_value?
-class_attribute_default_value ::= token_assign cmp_value
+class_attribute_default_value ::= token_assign expression
 
 sup_prototype_functions ::= keyword_sup generic_parameter_group? type_expression sup_implementation
 sup_prototype_extension ::= keyword_sup generic_parameter_group? type_expression keyword_ext type_expression sup_implementation
@@ -131,7 +139,7 @@ sup_type_statement ::= (annotation)* type_statement
 sup_cmp_statement ::= (annotation)* cmp_statement
 
 function_prototype ::= subroutine_prototype | coroutine_prototype
-subroutine_prototype ::= (annotation)* keyword_fun identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
+subroutine_prototype ::= (annotation)* keyword_cmp? keyword_fun identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
 coroutine_prototype ::= (annotation)* keyword_cor identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
 function_implementation ::= token_left_curly_brace (function_member)* token_right_curly_brace
 function_member ::= statement
@@ -142,7 +150,7 @@ function_parameter_self ::= function_parameter_self_with_convention | function_p
 function_parameter_self_with_convention ::= convention self_identifier
 function_parameter_self_without_convention ::= keyword_mut? self_identifier
 function_parameter_required ::= local_variable token_colon type_expression
-function_parameter_optional ::= local_variable token_colon type_expression token_assign cmp_value
+function_parameter_optional ::= local_variable token_colon type_expression token_assign expression
 function_parameter_variadic ::= token_double_dot local_variable token_colon type_expression
 
 function_call_argument_group ::= token_left_parenthesis (function_call_argument (token_comma function_call_argument)*)? token_right_parenthesis
@@ -154,7 +162,7 @@ generic_parameter_group ::= token_left_square_bracket (generic_parameter (token_
 generic_parameter ::= generic_parameter_type | generic_parameter_comp
 generic_parameter_comp ::= generic_parameter_comp_variadic | generic_parameter_comp_optional | generic_parameter_comp_required
 generic_parameter_comp_required ::= keyword_cmp identifier token_colon type_expression
-generic_parameter_comp_optional ::= keyword_cmp identifier token_colon type_expression token_assign cmp_value
+generic_parameter_comp_optional ::= keyword_cmp identifier token_colon type_expression token_assign expression
 generic_parameter_comp_variadic ::= keyword_cmp token_double_dot identifier token_colon type_expression
 generic_parameter_type ::= generic_parameter_type_variadic | generic_parameter_type_optional | generic_parameter_type_required
 generic_parameter_type_required ::= type_identifier generic_parameter_type_inline_constraints?
@@ -165,13 +173,13 @@ generic_parameter_type_inline_constraints ::= token_colon type_expression (token
 generic_argument_group ::= token_left_square_bracket (generic_argument (token_comma generic_argument)*)? token_right_square_bracket
 generic_argument ::= generic_argument_type | generic_argument_comp
 generic_argument_comp ::= generic_argument_comp_keyword | generic_argument_comp_positional
-generic_argument_comp_positional ::= cmp_value
-generic_argument_comp_keyword ::= identifier token_assign cmp_value
+generic_argument_comp_positional ::= expression
+generic_argument_comp_keyword ::= identifier token_assign expression
 generic_argument_type ::= generic_argument_type_keyword | generic_argument_type_positional
 generic_argument_type_positional ::= type_expression
 generic_argument_type_keyword ::= upper_identifier token_assign type_expression
 
-annotation ::= token_at identifier
+annotation ::= token_exclamation_mark identifier
 
 expression ::= binary_expression_precedence_level_0
 binary_expression_precedence_level_0 ::= binary_expression_precedence_level_1 (binary_expression_op_precedence_level_0 binary_expression_precedence_level_0)*
@@ -217,6 +225,8 @@ postfix_expression_op_runtime_member_access ::= token_dot (identifier | numeric_
 postfix_expression_op_static_member_access ::= token_double_colon identifier
 postfix_expression_op_keyword_not ::= token_dot keyword_not
 postfix_expression_op_index ::= token_left_square_bracket keyword_mut? expression token_right_square_bracket
+parse_postfix_expression_strictly_static_access ::= identifier (postfix_expression_op_static_member_access)+
+parse_postfix_expression_strictly_runtime_access ::= identifier (postfix_expression_op_runtime_member_access)+
 
 primary_expression ::=
     closure_expression |
@@ -308,7 +318,7 @@ gen_expression_without_value ::= keyword_gen
 gen_unroll_expression ::= keyword_gen keyword_with expression
 
 closure_expression ::= token_cor? closure_expression_parameter_and_capture_group expression
-closure_expression_parameter_and_capture_group ::= token_bit_ior closure_expression_parameter_group closure_expression_capture_group? token_bit_ior
+closure_expression_parameter_and_capture_group ::= token_left_parenthesis closure_expression_parameter_group closure_expression_capture_group? token_right_parenthesis
 closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
 closure_expression_capture ::= convention? (identifier | self_identifier)
 closure_expression_parameter_group ::= (closure_expression_parameter (token_comma closure_expression_parameter)*)?
@@ -320,7 +330,7 @@ object_initializer_argument ::= object_initializer_argument_keyword | object_ini
 object_initializer_argument_keyword ::= identifier token_assign expression
 object_initializer_argument_shorthand ::= identifier
 
-statement ::= let_statement | assignment_statement | use_statement | cmp_statement | type_statement | ret_statement | exit_statement | skip_statement | expression
+statement ::= let_statement | assignment_statement | use_statement | use_var_statement | cmp_statement | type_statement | ret_statement | exit_statement | skip_statement | expression
 let_statement ::= let_statement_initialized | let_statement_uninitialized
 let_statement_initialized ::= keyword_let local_variable let_statement_initialized_explicit_type? token_assign expression
 let_statement_initialized_explicit_type ::= token_colon type_expression
@@ -338,7 +348,8 @@ assignment_target_postfix_expression_op ::=
 assignment_target_primary_expression ::= identifier | self_identifier
 
 use_statement ::= keyword_use type_expression_simple
-cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign cmp_value
+use_var_statement ::= keyword_use parse_postfix_expression_strictly_static_access
+cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign expression
 type_statement ::= keyword_type upper_identifier generic_parameter_group? token_assign type_expression
 ret_statement ::= keyword_ret expression?
 
@@ -384,6 +395,7 @@ convention_mut ::= token_bit_and keyword_mut
 convention_ref ::= token_bit_and
 
 global_use_statement ::= annotation* use_statement
+global_use_var_statement ::= annotation* use_var_statement
 global_type_statement ::= annotation* type_statement
 global_cmp_statement ::= annotation* cmp_statement
 
@@ -416,7 +428,7 @@ type_tuple_shorthand ::=
 type_tuple_shorthand_0_elements ::= token_left_parenthesis token_right_parenthesis
 type_tuple_shorthand_1_element ::= token_left_parenthesis type_expression token_comma token_right_parenthesis
 type_tuple_shorthand_n_elements ::= token_left_parenthesis (type_expression (token_comma type_expression)+) token_right_parenthesis
-type_array_shorthand ::= token_left_square_bracket type_expression token_semicolon cmp_value token_right_square_bracket
+type_array_shorthand ::= token_left_square_bracket type_expression token_semicolon expression token_right_square_bracket
 type_expression_simple ::= type_postfix_expression_simple
 
 identifier ::= lexeme_identifier
@@ -461,19 +473,5 @@ integer_suffix_type ::= token_underscore ('s8' | 's16' | 's32' | 's64' | 's128' 
 literal_tuple_1_element ::= token_left_parenthesis expression token_comma token_right_parenthesis
 literal_tuple_n_elements ::= token_left_parenthesis expression (token_comma expression)+ token_right_parenthesis
 
-literal_array_repeated_element ::= token_left_square_bracket expression token_semicolon cmp_value token_right_square_bracket
+literal_array_repeated_element ::= token_left_square_bracket expression token_semicolon expression token_right_square_bracket
 literal_array_explicit_elements ::= token_left_square_bracket expression (token_comma expression)* token_right_square_bracket
-
-cmp_value ::= literal_char | literal_string | literal_float | literal_integer | literal_boolean | cmp_literal_tuple | cmp_literal_array | cmp_object_initializer | identifier
-cmp_literal_tuple ::= cmp_literal_tuple_1_element | cmp_literal_tuple_n_elements
-cmp_literal_array ::= cmp_literal_array_explicit_elements | cmp_literal_array_repeated_element
-cmp_object_initializer ::= type_expression_simple cmp_object_initializer_argument_group
-cmp_object_initializer_argument_group ::= token_left_parenthesis (cmp_object_initializer_argument token_comma)* token_right_parenthesis
-cmp_object_initializer_argument ::= cmp_object_initializer_argument_keyword | object_initializer_argument_shorthand
-cmp_object_initializer_argument_keyword ::= identifier token_assign cmp_value
-
-cmp_literal_tuple_1_element ::= token_left_parenthesis cmp_value token_comma token_right_parenthesis
-cmp_literal_tuple_n_elements ::= token_left_parenthesis cmp_value (token_comma cmp_value)+ token_right_parenthesis
-
-cmp_literal_array_repeated_element ::= token_left_square_bracket cmp_value token_semicolon cmp_value token_right_square_bracket
-cmp_literal_array_explicit_elements ::= token_left_square_bracket (cmp_value (token_comma cmp_value)* token_right_square_bracket)
