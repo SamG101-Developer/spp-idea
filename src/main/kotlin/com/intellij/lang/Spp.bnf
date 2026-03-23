@@ -179,7 +179,9 @@ generic_argument_type ::= generic_argument_type_keyword | generic_argument_type_
 generic_argument_type_positional ::= type_expression
 generic_argument_type_keyword ::= upper_identifier token_assign type_expression
 
-annotation ::= token_exclamation_mark identifier
+annotation ::= annotation_with_call | annotation_no_call
+annotation_with_call ::= token_exclamation_mark parse_postfix_expression_strictly_static_access_zero generic_argument_group? function_call_argument_group
+annotation_no_call ::= token_exclamation_mark parse_postfix_expression_strictly_static_access_zero
 
 expression ::= binary_expression_precedence_level_0
 binary_expression_precedence_level_0 ::= binary_expression_precedence_level_1 (binary_expression_op_precedence_level_0 binary_expression_precedence_level_0)*
@@ -225,8 +227,8 @@ postfix_expression_op_runtime_member_access ::= token_dot (identifier | numeric_
 postfix_expression_op_static_member_access ::= token_double_colon identifier
 postfix_expression_op_keyword_not ::= token_dot keyword_not
 postfix_expression_op_index ::= token_left_square_bracket keyword_mut? expression token_right_square_bracket
-parse_postfix_expression_strictly_static_access ::= identifier (postfix_expression_op_static_member_access)+
-parse_postfix_expression_strictly_runtime_access ::= identifier (postfix_expression_op_runtime_member_access)+
+parse_postfix_expression_strictly_static_access_zero ::= identifier (postfix_expression_op_static_member_access)*
+parse_postfix_expression_strictly_static_access_one ::= identifier (postfix_expression_op_static_member_access)+
 
 primary_expression ::=
     closure_expression |
@@ -348,7 +350,7 @@ assignment_target_postfix_expression_op ::=
 assignment_target_primary_expression ::= identifier | self_identifier
 
 use_statement ::= keyword_use type_expression_simple
-use_var_statement ::= keyword_use parse_postfix_expression_strictly_static_access
+use_var_statement ::= keyword_use parse_postfix_expression_strictly_static_access_one
 cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign expression
 type_statement ::= keyword_type upper_identifier generic_parameter_group? token_assign type_expression
 ret_statement ::= keyword_ret expression?
