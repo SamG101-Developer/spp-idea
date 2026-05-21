@@ -403,7 +403,7 @@ global_cmp_statement ::= annotation* cmp_statement
 
 inner_scope_expression ::= token_left_curly_brace (statement)* token_right_curly_brace
 
-type_expression ::= type_never | type_parenthesised_expression | type_array_shorthand | type_tuple_shorthand | type_binary_expression_precedence_level_0
+type_expression ::= type_never | type_parenthesised_expression | type_array_shorthand | type_slice_shorthand | type_tuple_shorthand | type_binary_expression_precedence_level_0
 type_binary_expression_precedence_level_0 ::= type_binary_expression_precedence_level_1 (type_binary_expression_op_precedence_level_0 type_binary_expression_precedence_level_0)*
 type_binary_expression_precedence_level_1 ::= type_postfix_expression (type_binary_expression_op_precedence_level_1 type_binary_expression_precedence_level_1)*
 type_binary_expression_op_precedence_level_0 ::= keyword_or
@@ -431,6 +431,7 @@ type_tuple_shorthand_0_elements ::= token_left_parenthesis token_right_parenthes
 type_tuple_shorthand_1_element ::= token_left_parenthesis type_expression token_comma token_right_parenthesis
 type_tuple_shorthand_n_elements ::= token_left_parenthesis (type_expression (token_comma type_expression)+) token_right_parenthesis
 type_array_shorthand ::= token_left_square_bracket type_expression token_semicolon expression token_right_square_bracket
+type_slice_shorthand ::= token_left_square_bracket type_expression token_right_square_bracket
 type_expression_simple ::= type_postfix_expression_simple
 
 identifier ::= lexeme_identifier
