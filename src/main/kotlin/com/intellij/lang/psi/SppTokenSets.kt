@@ -39,6 +39,7 @@ interface SppTokenSets {
             SppTypes.KEYWORD_OF,
             SppTypes.KEYWORD_LOOP,
             SppTypes.KEYWORD_IN,
+            SppTypes.KEYWORD_TO,
             SppTypes.KEYWORD_ELSE,
             SppTypes.KEYWORD_GEN,
             SppTypes.KEYWORD_WITH,
@@ -91,7 +92,8 @@ interface SppTokenSets {
             SppTypes.TOKEN_QUESTION_MARK,
             SppTypes.TOKEN_EXCLAMATION_MARK,
             SppTypes.TOKEN_DOUBLE_EXCLAMATION_MARK,
-            SppTypes.TOKEN_AT
+            SppTypes.TOKEN_AT,
+            SppTypes.TOKEN_ARROW_RIGHT
         )
 
         val BRACKETS: TokenSet = TokenSet.create(
