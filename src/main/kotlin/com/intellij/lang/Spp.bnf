@@ -22,8 +22,8 @@
         lexeme_oct_digits = "regexp:0o[0-7]+"
         lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
         lexeme_dec_digits = "regexp:[0-9]+"
-        lexeme_single_quote_str = "regexp:'[^']*'"
-        lexeme_double_quote_str = "regexp:\"[^\"]*\""
+        lexeme_single_quote_str = "regexp:b?'[^']*'"
+        lexeme_double_quote_str = "regexp:b?\"[^\"]*\""
 
         token_left_curly_brace = "{"
         token_right_curly_brace = "}"
