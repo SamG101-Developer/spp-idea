@@ -13,7 +13,6 @@
 
     tokens = [
         line_comment = "regexp:#.*"
-        block_comment = "regexp:##[^#]*##"
 
         lexeme_regex = "regexp:r\".*\""
         lexeme_identifier = "regexp:[a-z][_a-zA-Z0-9]*"
