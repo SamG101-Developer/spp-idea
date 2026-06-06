@@ -224,7 +224,7 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
     private fun genericParamLine(gp: SppGenericParameter): String {
         val name = genericParamName(gp) ?: return ""
         val tag = if (gp.genericParameterType != null) "type" else "cmp"
-        return "$# @$tag $name: \n"
+        return "# @$tag $name: \n"
     }
 
     private fun funcParamLine(fp: SppFunctionParameter): String {
