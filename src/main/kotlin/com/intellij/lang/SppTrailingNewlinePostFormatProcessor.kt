@@ -22,7 +22,7 @@ class SppTrailingNewlinePostFormatProcessor : PostFormatProcessor {
             if (project.isDisposed) return@invokeLater
             WriteCommandAction.runWriteCommandAction(project) {
                 val text = doc.text
-                val cleaned = text.replace(Regex("(?m)^[ \t]+$"), "").trimEnd() + "\n"
+                val cleaned = text.replace(Regex("[ \t]+$", RegexOption.MULTILINE), "").trimEnd() + "\n"
                 if (text != cleaned) doc.replaceString(0, doc.textLength, cleaned)
             }
         }
