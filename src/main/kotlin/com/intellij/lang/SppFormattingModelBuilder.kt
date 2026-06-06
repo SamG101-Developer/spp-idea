@@ -64,7 +64,15 @@ class SppBlock(
         return Indent.getNormalIndent()
     }
 
-    override fun getSpacing(child1: Block?, child2: Block): Spacing? = null
+    override fun getSpacing(child1: Block?, child2: Block): Spacing? {
+        if (node.elementType !in BRACE_BLOCK_TYPES) return null
+        val t1 = (child1 as? SppBlock)?.node?.elementType
+        val t2 = (child2 as? SppBlock)?.node?.elementType
+        // Empty block: collapse to "{ }" with a single space and no line breaks.
+        if (t1 == SppTypes.TOKEN_LEFT_CURLY_BRACE && t2 == SppTypes.TOKEN_RIGHT_CURLY_BRACE)
+            return Spacing.createSpacing(1, 1, 0, false, 0)
+        return null
+    }
 
     override fun isLeaf(): Boolean = node.firstChildNode == null
 }
