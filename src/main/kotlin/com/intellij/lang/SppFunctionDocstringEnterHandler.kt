@@ -46,6 +46,8 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
             CodeStyleManager.getInstance(file.project).reformatText(file, inserted.startOffset, inserted.endOffset)
             val firstHash = editor.document.text.indexOf('#', lineStart)
             if (firstHash >= 0) editor.caretModel.moveToOffset(firstHash + "# ".length)
+        } else {
+            continueComment(editor, offset)
         }
 
         return EnterHandlerDelegate.Result.Continue
@@ -164,6 +166,45 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         }
 
         return insert(editor, offset, text)
+    }
+
+    // If the previous line was a # comment, continue it on the new line.
+    // Fires when: (a) Enter was pressed in the middle of a comment, or
+    // (b) at the end of a comment whose next sibling line is also a comment.
+    private fun continueComment(editor: Editor, offset: Int) {
+        val doc = editor.document
+        val curLineNum = doc.getLineNumber(offset)
+        if (curLineNum == 0) return
+
+        val prevLineText = doc.getText(TextRange(
+            doc.getLineStartOffset(curLineNum - 1),
+            doc.getLineEndOffset(curLineNum - 1)
+        ))
+
+        val contentIdx = prevLineText.indexOfFirst { !it.isWhitespace() }
+        if (contentIdx < 0 || prevLineText[contentIdx] != '#') return
+        val commentIndent = prevLineText.substring(0, contentIdx)
+
+        // Detect middle-of-comment: IntelliJ moved text after cursor to this line.
+        val curLineEnd = doc.getLineEndOffset(curLineNum)
+        val inMiddle = doc.getText(TextRange(offset, curLineEnd)).isNotBlank()
+
+        if (!inMiddle) {
+            // At end of comment: only continue if the line below is also a comment.
+            val nextLineNum = curLineNum + 1
+            if (nextLineNum >= doc.lineCount) return
+            val nextLineText = doc.getText(TextRange(
+                doc.getLineStartOffset(nextLineNum),
+                doc.getLineEndOffset(nextLineNum)
+            ))
+            val nextIdx = nextLineText.indexOfFirst { !it.isWhitespace() }
+            if (nextIdx < 0 || nextLineText[nextIdx] != '#') return
+        }
+
+        // Replace whatever auto-indent was added with the correct comment prefix.
+        val curLineStart = doc.getLineStartOffset(curLineNum)
+        doc.replaceString(curLineStart, offset, "$commentIndent# ")
+        editor.caretModel.moveToOffset(curLineStart + commentIndent.length + "# ".length)
     }
 
     // Check if the block already opens with a docstring comment.
