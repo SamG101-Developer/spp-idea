@@ -4,6 +4,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.psi.*
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
@@ -74,8 +75,28 @@ class SppAnnotator : Annotator {
                     && isDocstringComment(element)) {
                     holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
                         .textAttributes(SppSyntaxHighlighter.DOCSTRING).create()
+                    annotateDocstringTags(element, holder)
                 }
             }
+        }
+    }
+
+    // Pattern: @tag optionally followed by a value token (anything up to whitespace or colon).
+    private val docstringTagPattern = Regex("""(@\w+)(?:\s+([^\s:]+))?""")
+
+    private fun annotateDocstringTags(comment: PsiElement, holder: AnnotationHolder) {
+        val text = comment.text
+        val base = comment.textRange.startOffset
+        for (match in docstringTagPattern.findAll(text)) {
+            val tagGroup = match.groups[1]!!
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(base + tagGroup.range.first, base + tagGroup.range.last + 1))
+                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG).create()
+
+            val valueGroup = match.groups[2] ?: continue
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(base + valueGroup.range.first, base + valueGroup.range.last + 1))
+                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG_VALUE).create()
         }
     }
 

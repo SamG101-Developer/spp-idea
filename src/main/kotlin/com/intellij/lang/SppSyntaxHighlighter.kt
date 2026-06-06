@@ -26,6 +26,10 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
             TextAttributesKey.createTextAttributesKey("SPP_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
         val DOCSTRING: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING", DefaultLanguageHighlighterColors.DOC_COMMENT)
+        val DOCSTRING_TAG: TextAttributesKey =
+            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_TAG", DefaultLanguageHighlighterColors.DOC_COMMENT_TAG)
+        val DOCSTRING_TAG_VALUE: TextAttributesKey =
+            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_TAG_VALUE", DefaultLanguageHighlighterColors.DOC_COMMENT_TAG_VALUE)
         val OPERATOR: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
         val BRACKET: TextAttributesKey =
