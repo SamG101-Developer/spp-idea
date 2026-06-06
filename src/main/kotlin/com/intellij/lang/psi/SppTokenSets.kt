@@ -9,7 +9,7 @@ interface SppTokenSets {
         )
 
         val COMMENTS: TokenSet = TokenSet.create(
-            SppTypes.LINE_COMMENT, SppTypes.BLOCK_COMMENT
+            SppTypes.LINE_COMMENT
         )
 
         val STRINGS: TokenSet = TokenSet.create(
