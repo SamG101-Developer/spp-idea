@@ -17,6 +17,7 @@
         <lang.parserDefinition language="S++" implementationClass="com.intellij.lang.SppParserDefinition"/>
         <lang.syntaxHighlighterFactory language="S++" implementationClass="com.intellij.lang.SppSyntaxHighlighterFactory"/>
         <lang.braceMatcher language="S++" implementationClass="com.intellij.lang.SppBraceMatcher"/>
+        <lang.commenter language="S++" implementationClass="com.intellij.lang.SppCommenter"/>
         <annotator language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
         <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
         <enterHandlerDelegate implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
