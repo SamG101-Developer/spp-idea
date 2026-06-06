@@ -149,12 +149,14 @@ class SppAnnotator : Annotator {
         }
     }
 
-    // Pattern: @tag optionally followed by a value token (anything up to whitespace or colon).
     private val docstringTagPattern = Regex("""(@\w+)(?:\s+([^\s:]+))?""")
+    private val inlineCodePattern = Regex("""`[^`\n]+`""")
 
     private fun annotateDocstringTags(comment: PsiElement, holder: AnnotationHolder) {
         val text = comment.text
         val base = comment.textRange.startOffset
+
+        // @tag and value highlighting
         for (match in docstringTagPattern.findAll(text)) {
             val tagGroup = match.groups[1]!!
             holder
@@ -168,6 +170,15 @@ class SppAnnotator : Annotator {
                 .newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(TextRange(base + valueGroup.range.first, base + valueGroup.range.last + 1))
                 .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG_VALUE)
+                .create()
+        }
+
+        // Inline code: `...`
+        for (match in inlineCodePattern.findAll(text)) {
+            holder
+                .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(base + match.range.first, base + match.range.last + 1))
+                .textAttributes(SppSyntaxHighlighter.DOCSTRING_INLINE_CODE)
                 .create()
         }
     }
