@@ -21,5 +21,6 @@
         <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
         <enterHandlerDelegate implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
         <lang.formatter language="S++" implementationClass="com.intellij.lang.SppFormattingModelBuilder"/>
+        <postFormatProcessor implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
     </extensions>
 </idea-plugin>
