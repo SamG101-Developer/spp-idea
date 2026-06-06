@@ -15,66 +15,134 @@ class SppAnnotator : Annotator {
         val parent = element.parent
         when (element) {
             is SppIdentifier if parent is SppSubroutinePrototype -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppCoroutinePrototype -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppClassAttribute -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppPostfixExpressionOpRuntimeMemberAccess -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppPostfixExpressionOpStaticMemberAccess -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER).create()
+                // If the immediately following op in the postfix chain is a function call,
+                // this is the call target (align_of in std::mem::align_of()) -> FUNCTION_CALL.
+                // Otherwise, it's a namespace segment -> TYPE_IDENTIFIER.
+                val op = parent.parent as? SppPostfixExpressionOp
+                val ops = (op?.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: emptyList()
+                val nextOp = op?.let { ops.getOrNull(ops.indexOf(it) + 1) }
+                val attr = if (nextOp?.postfixExpressionOpFunctionCall != null)
+                    SppSyntaxHighlighter.FUNCTION_CALL
+                else
+                    SppSyntaxHighlighter.TYPE_IDENTIFIER
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(attr)
+                    .create()
+            }
+
+            is SppIdentifier if parent is SppPrimaryExpression -> {
+                // Primary expression base: namespace root (std in std::mem::foo()) -> TYPE_IDENTIFIER,
+                // or direct function call (a in a()) -> FUNCTION_CALL.
+                val ops = (parent.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: return
+                when {
+                    ops.any { it.postfixExpressionOpStaticMemberAccess != null } ->
+                        holder
+                            .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                            .range(element)
+                            .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+                            .create()
+
+                    ops.any { it.postfixExpressionOpFunctionCall != null } ->
+                        holder
+                            .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                            .range(element)
+                            .textAttributes(SppSyntaxHighlighter.FUNCTION_CALL)
+                            .create()
+                }
             }
 
             is SppIdentifier if parent is SppObjectInitializerArgumentKeyword && element == parent.getIdentifier() -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppCaseExpressionPatternVariantSingleIdentifier -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+                    .create()
             }
 
             is SppIdentifier if parent is SppTypeUnaryExpressionOperatorNamespace -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+                    .create()
             }
 
             is SppLiteralString -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.STRING).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.STRING)
+                    .create()
             }
 
             is SppLiteralChar -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.STRING).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.STRING)
+                    .create()
             }
 
             is SppAnnotation -> {
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                    .textAttributes(SppSyntaxHighlighter.ANNOTATION).create()
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.ANNOTATION)
+                    .create()
             }
 
             is PsiComment -> {
                 val p = element.parent
                 if ((p is SppFunctionImplementation || p is SppClassImplementation || p is SppSupImplementation)
-                    && isDocstringComment(element)) {
-                    holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
-                        .textAttributes(SppSyntaxHighlighter.DOCSTRING).create()
+                    && isDocstringComment(element)
+                ) {
+                    holder
+                        .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                        .range(element)
+                        .textAttributes(SppSyntaxHighlighter.DOCSTRING)
+                        .create()
                     annotateDocstringTags(element, holder)
                 }
             }
@@ -89,14 +157,18 @@ class SppAnnotator : Annotator {
         val base = comment.textRange.startOffset
         for (match in docstringTagPattern.findAll(text)) {
             val tagGroup = match.groups[1]!!
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+            holder
+                .newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(TextRange(base + tagGroup.range.first, base + tagGroup.range.last + 1))
-                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG).create()
+                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG)
+                .create()
 
             val valueGroup = match.groups[2] ?: continue
-            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+            holder
+                .newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(TextRange(base + valueGroup.range.first, base + valueGroup.range.last + 1))
-                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG_VALUE).create()
+                .textAttributes(SppSyntaxHighlighter.DOCSTRING_TAG_VALUE)
+                .create()
         }
     }
 

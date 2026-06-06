@@ -36,6 +36,8 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
             TextAttributesKey.createTextAttributesKey("SPP_BRACKET", DefaultLanguageHighlighterColors.BRACKETS)
         val ATTRIBUTE: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_ATTRIBUTE", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
+        val FUNCTION_CALL: TextAttributesKey =
+            TextAttributesKey.createTextAttributesKey("SPP_FUNCTION_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
         val ANNOTATION: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_ANNOTATION", DefaultLanguageHighlighterColors.METADATA)
 
