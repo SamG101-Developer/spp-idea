@@ -46,17 +46,37 @@ class SppAnnotator : Annotator {
                     .create()
             }
 
+            is SppIdentifier if parent is SppParsePostfixExpressionStrictlyStaticAccessOne -> {
+                // Root of a use-var chain (e.g. `std` in `use std::ops::malloc`) — always a namespace root.
+                holder
+                    .newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(element)
+                    .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+                    .create()
+            }
+
             is SppIdentifier if parent is SppPostfixExpressionOpStaticMemberAccess -> {
-                // If the immediately following op in the postfix chain is a function call,
-                // this is the call target (align_of in std::mem::align_of()) -> FUNCTION_CALL.
-                // Otherwise, it's a namespace segment -> TYPE_IDENTIFIER.
-                val op = parent.parent as? SppPostfixExpressionOp
-                val ops = (op?.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: emptyList()
-                val nextOp = op?.let { ops.getOrNull(ops.indexOf(it) + 1) }
-                val attr = if (nextOp?.postfixExpressionOpFunctionCall != null)
-                    SppSyntaxHighlighter.FUNCTION_CALL
-                else
-                    SppSyntaxHighlighter.TYPE_IDENTIFIER
+                val grandParent = parent.parent
+                val attr = when {
+                    // use-var chain: last identifier is the referenced var/func; others are namespace segments.
+                    grandParent is SppParsePostfixExpressionStrictlyStaticAccessOne -> {
+                        val isLast = grandParent.postfixExpressionOpStaticMemberAccessList.lastOrNull() == parent
+                        if (isLast) SppSyntaxHighlighter.IDENTIFIER
+                        else SppSyntaxHighlighter.TYPE_IDENTIFIER
+                    }
+                    // Normal postfix expression: intermediate namespace → TYPE_IDENTIFIER,
+                    // function call target → FUNCTION_CALL, last with no call → IDENTIFIER.
+                    else -> {
+                        val op = grandParent as? SppPostfixExpressionOp
+                        val ops = (op?.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: emptyList()
+                        val nextOp = op?.let { ops.getOrNull(ops.indexOf(it) + 1) }
+                        when {
+                            nextOp?.postfixExpressionOpFunctionCall != null -> SppSyntaxHighlighter.FUNCTION_CALL
+                            nextOp == null -> SppSyntaxHighlighter.IDENTIFIER
+                            else -> SppSyntaxHighlighter.TYPE_IDENTIFIER
+                        }
+                    }
+                }
                 holder
                     .newSilentAnnotation(HighlightSeverity.INFORMATION)
                     .range(element)
