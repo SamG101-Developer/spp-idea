@@ -4,6 +4,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.psi.*
+import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
@@ -57,13 +58,15 @@ class SppAnnotator : Annotator {
 
             is SppIdentifier if parent is SppPostfixExpressionOpStaticMemberAccess -> {
                 val grandParent = parent.parent
-                val attr = when {
+                val attr: TextAttributesKey = when {
                     // use-var chain: last identifier is the referenced var/func; others are namespace segments.
                     grandParent is SppParsePostfixExpressionStrictlyStaticAccessOne -> {
                         val isLast = grandParent.postfixExpressionOpStaticMemberAccessList.lastOrNull() == parent
                         if (isLast) SppSyntaxHighlighter.IDENTIFIER
                         else SppSyntaxHighlighter.TYPE_IDENTIFIER
                     }
+                    // Annotation path: SppAnnotation already colours the full range — don't override.
+                    grandParent is SppParsePostfixExpressionStrictlyStaticAccessZero -> return
                     // Normal postfix expression: intermediate namespace → TYPE_IDENTIFIER,
                     // function call target → FUNCTION_CALL, last with no call → IDENTIFIER.
                     else -> {
