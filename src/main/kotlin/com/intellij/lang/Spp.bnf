@@ -21,7 +21,7 @@
         lexeme_oct_digits = "regexp:0o[0-7]+"
         lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
         lexeme_dec_digits = "regexp:[0-9]+"
-        lexeme_single_quote_str = "regexp:b?'[^']*'"
+        lexeme_single_quote_str = "regexp:b?'[^']+'"
         lexeme_double_quote_str = "regexp:b?\"[^\"]*\""
 
         token_left_curly_brace = "{"
@@ -108,7 +108,6 @@
         keyword_caps = "caps"
     ]
 }
-
 
 
 root ::= module_prototype <<eof>>
@@ -219,6 +218,7 @@ postfix_expression_op ::=
     postfix_expression_op_runtime_member_access |
     postfix_expression_op_static_member_access |
     postfix_expression_op_keyword_not |
+    // postfix_expression_op_keyword_res | TODO ?
     postfix_expression_op_slice |
     postfix_expression_op_index
 postfix_expression_op_deref ::= token_at
@@ -348,6 +348,7 @@ assignment_target_postfix_expression_op ::=
     postfix_expression_op_function_call
     postfix_expression_op_static_member_access |
     postfix_expression_op_runtime_member_access |
+    postfix_expression_op_slice |
     postfix_expression_op_index
 assignment_target_primary_expression ::= identifier | self_identifier
 
