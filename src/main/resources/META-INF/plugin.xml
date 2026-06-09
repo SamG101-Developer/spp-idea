@@ -19,6 +19,7 @@
         <lang.braceMatcher language="S++" implementationClass="com.intellij.lang.SppBraceMatcher"/>
         <lang.commenter language="S++" implementationClass="com.intellij.lang.SppCommenter"/>
         <annotator language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
+        <annotator language="S++" implementationClass="com.intellij.lang.SppDocstringAnnotator"/>
         <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
         <enterHandlerDelegate implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
         <lang.formatter language="S++" implementationClass="com.intellij.lang.SppFormattingModelBuilder"/>
