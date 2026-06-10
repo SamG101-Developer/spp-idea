@@ -94,7 +94,12 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
         // Re-paragraph the docstring by splitting the group into its
         // paragraphs and then handling the paragraphs internally.
         val reflowed = splitIntoParagraphs(lines, indent).flatMap { para ->
-            if (isBlank(para.first(), indent)) para else reflowParagraph(para, indent, available)
+            val firstContent = extractContent(para.first(), indent)
+            when {
+                isBlank(para.first(), indent) -> para
+                firstContent.trimStart().startsWith("```") -> para   // verbatim code block
+                else -> reflowParagraph(para, indent, available)
+            }
         }
 
         if (reflowed == lines) return null
@@ -115,35 +120,42 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
     private fun splitIntoParagraphs(lines: List<String>, indent: String): List<List<String>> {
         val result = mutableListOf<MutableList<String>>()
         var current = mutableListOf<String>()
+        var inCodeBlock = false
 
         for (line in lines) {
             val content = extractContent(line, indent)
-            when {
-                // Break the individual paragraphs when a blank line is
-                // discovered, and we are already in a paragraph.
-                content.isEmpty() -> {
-                    if (current.isNotEmpty()) {
-                        result += current; current = mutableListOf()
-                    }
-                    result += mutableListOf(line)   // blank line: own paragraph, not reflowed
-                }
 
-                // When we encounter an `@`, we aer at a tag definition
-                // site, so also treat this as a new paragraph.
+            // Code-fence toggle: ``` opens or closes a verbatim block.
+            if (content.trimStart().startsWith("```")) {
+                if (!inCodeBlock) {
+                    // Opening fence: flush any current text paragraph, begin verbatim.
+                    if (current.isNotEmpty()) { result += current; current = mutableListOf() }
+                    inCodeBlock = true
+                } else {
+                    inCodeBlock = false
+                }
+                current += line
+                // Closing fence: flush the verbatim paragraph immediately.
+                if (!inCodeBlock) { result += current; current = mutableListOf() }
+                continue
+            }
+
+            // Inside a code block: accumulate verbatim, no paragraph logic.
+            if (inCodeBlock) { current += line; continue }
+
+            when {
+                content.isEmpty() -> {
+                    if (current.isNotEmpty()) { result += current; current = mutableListOf() }
+                    result += mutableListOf(line)
+                }
                 content.startsWith("@") -> {
-                    if (current.isNotEmpty()) {
-                        result += current; current = mutableListOf()
-                    }
+                    if (current.isNotEmpty()) { result += current; current = mutableListOf() }
                     current = mutableListOf(line)
                 }
-
-                // Otherwise, just add the line into the paragraph.
                 else -> current += line
             }
         }
 
-        // Add the final section into the accumulated data, and
-        // return the final result.
         if (current.isNotEmpty()) result += current
         return result
     }
