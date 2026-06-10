@@ -205,7 +205,7 @@ class SppDocstringAnnotator : Annotator {
                 val nameGroup = match.groups[2]
                 result += DocTag(
                     tag = tag,
-                    name = nameGroup?.value,
+                    name = nameGroup?.value?.trimStart { !it.isLetterOrDigit() && it != '_' },
                     nameRange = nameGroup?.let { TextRange(base + it.range.first, base + it.range.last + 1) })
             }
         }
