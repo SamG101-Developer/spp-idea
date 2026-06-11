@@ -44,19 +44,43 @@ class SppBlock(
     }
 
     private fun childIndentFor(child: ASTNode): Indent {
-        if (node.elementType !in BRACE_BLOCK_TYPES) return Indent.getNoneIndent()
+        if (node.elementType in BRACE_BLOCK_TYPES) {
+            val childType = child.elementType
+            if (childType == SppTypes.TOKEN_LEFT_CURLY_BRACE || childType == SppTypes.TOKEN_RIGHT_CURLY_BRACE)
+                return Indent.getNoneIndent()
 
-        val childType = child.elementType
-        if (childType == SppTypes.TOKEN_LEFT_CURLY_BRACE || childType == SppTypes.TOKEN_RIGHT_CURLY_BRACE)
-            return Indent.getNoneIndent()
+            // case_of_expression has a header (case expr of) before its {; only indent the branches
+            if (node.elementType == SppTypes.CASE_OF_EXPRESSION) {
+                val lBrace = node.findChildByType(SppTypes.TOKEN_LEFT_CURLY_BRACE) ?: return Indent.getNoneIndent()
+                return if (child.startOffset > lBrace.startOffset) Indent.getNormalIndent() else Indent.getNoneIndent()
+            }
 
-        // case_of_expression has a header (case expr of) before its {; only indent the branches
-        if (node.elementType == SppTypes.CASE_OF_EXPRESSION) {
-            val lBrace = node.findChildByType(SppTypes.TOKEN_LEFT_CURLY_BRACE) ?: return Indent.getNoneIndent()
-            return if (child.startOffset > lBrace.startOffset) Indent.getNormalIndent() else Indent.getNoneIndent()
+            return Indent.getNormalIndent()
         }
 
-        return Indent.getNormalIndent()
+        val lParen = node.findChildByType(SppTypes.TOKEN_LEFT_PARENTHESIS)
+        if (lParen != null) {
+            val childType = child.elementType
+            if (childType == SppTypes.TOKEN_LEFT_PARENTHESIS || childType == SppTypes.TOKEN_RIGHT_PARENTHESIS)
+                return Indent.getNoneIndent()
+            val rParen = node.findChildByType(SppTypes.TOKEN_RIGHT_PARENTHESIS)
+            if (child.startOffset > lParen.startOffset &&
+                (rParen == null || child.startOffset < rParen.startOffset))
+                return Indent.getNormalIndent()
+        }
+
+        val lBracket = node.findChildByType(SppTypes.TOKEN_LEFT_SQUARE_BRACKET)
+        if (lBracket != null) {
+            val childType = child.elementType
+            if (childType == SppTypes.TOKEN_LEFT_SQUARE_BRACKET || childType == SppTypes.TOKEN_RIGHT_SQUARE_BRACKET)
+                return Indent.getNoneIndent()
+            val rBracket = node.findChildByType(SppTypes.TOKEN_RIGHT_SQUARE_BRACKET)
+            if (child.startOffset > lBracket.startOffset &&
+                (rBracket == null || child.startOffset < rBracket.startOffset))
+                return Indent.getNormalIndent()
+        }
+
+        return Indent.getNoneIndent()
     }
 
     override fun getChildIndent(): Indent {
