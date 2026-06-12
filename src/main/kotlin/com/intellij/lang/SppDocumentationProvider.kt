@@ -9,6 +9,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 
+private val NUMBERED_ITEM_RE = Regex("""^\d+\. """)
+
 class SppDocumentationProvider : AbstractDocumentationProvider() {
 
     override fun getCustomDocumentationElement(
@@ -160,9 +162,11 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
         if (lines.isEmpty()) return ""
         val sb = StringBuilder()
         var i = 0
-        var inList = false
+        var listTag: String? = null  // "ul", "ol", or null
         var inCode = false
         val codeLines = mutableListOf<String>()
+
+        fun closeList() { if (listTag != null) { sb.append("</$listTag>"); listTag = null } }
 
         while (i < lines.size) {
             val line = lines[i]
@@ -170,9 +174,7 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
 
             // Code blocks
             if (trimmed.startsWith("```")) {
-                if (inList) {
-                    sb.append("</ul>"); inList = false
-                }
+                closeList()
                 if (!inCode) {
                     inCode = true; codeLines.clear()
                 } else {
@@ -182,44 +184,41 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
                 }
                 i++; continue
             }
-            if (inCode) {
-                codeLines += line; i++; continue
-            }
+            if (inCode) { codeLines += line; i++; continue }
 
             // Blank line (paragraph break)
-            if (trimmed.isEmpty()) {
-                if (inList) {
-                    sb.append("</ul>"); inList = false
-                }
-                i++; continue
-            }
+            if (trimmed.isEmpty()) { closeList(); i++; continue }
 
-            // Bullet point list
+            // Unordered bullet list
             if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-                if (!inList) {
-                    sb.append("<ul>"); inList = true
-                }
+                if (listTag != "ul") { closeList(); sb.append("<ul>"); listTag = "ul" }
                 sb.append("<li>").append(renderInline(trimmed.substring(2))).append("</li>")
                 i++; continue
             }
 
-            // Standard text paragraph
-            if (inList) {
-                sb.append("</ul>"); inList = false
+            // Ordered (numbered) list: "1. text", "2. text", etc.
+            val numMatch = NUMBERED_ITEM_RE.find(trimmed)
+            if (numMatch != null) {
+                if (listTag != "ol") { closeList(); sb.append("<ol>"); listTag = "ol" }
+                sb.append("<li>").append(renderInline(trimmed.substring(numMatch.range.last + 1))).append("</li>")
+                i++; continue
             }
+
+            // Standard text paragraph
+            closeList()
             val para = mutableListOf(trimmed)
             i++
             while (i < lines.size) {
                 val next = lines[i].trim()
                 if (next.isEmpty() || next.startsWith("- ") || next.startsWith("* ") ||
-                    next.startsWith("```")
+                    NUMBERED_ITEM_RE.containsMatchIn(next) || next.startsWith("```")
                 ) break
                 para += next; i++
             }
             sb.append("<p>").append(renderInline(para.joinToString(" "))).append("</p>")
         }
 
-        if (inList) sb.append("</ul>")
+        closeList()
         if (inCode && codeLines.isNotEmpty())
             sb.append("<pre>").append(codeLines.joinToString("\n").escapeHtml()).append("</pre>")
         return sb.toString()

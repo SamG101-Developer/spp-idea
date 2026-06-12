@@ -47,6 +47,7 @@ class SppDocstringAnnotator : Annotator {
                 .range(nameElem).create()
             return
         }
+        validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
         val docLetNames = tags.filter { it.tag == "let" }.mapNotNull { it.name }.toSet()
@@ -103,6 +104,7 @@ class SppDocstringAnnotator : Annotator {
                 .range(proto.upperIdentifier).create()
             return
         }
+        validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
         val docAttNames = tags.filter { it.tag == "let" }.mapNotNull { it.name }.toSet()
@@ -162,6 +164,7 @@ class SppDocstringAnnotator : Annotator {
                 .range(nameElem).create()
             return
         }
+        validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
         val docTypeNames = tags.filter { it.tag == "type" }.mapNotNull { it.name }.toSet()
@@ -192,6 +195,41 @@ class SppDocstringAnnotator : Annotator {
         for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames })
             holder.newAnnotation(HighlightSeverity.WARNING, "No constant named '${tag.name}'")
                 .range(tag.nameRange!!).create()
+    }
+
+    private val numberedItemRe = Regex("""^(\d+)\. """)
+
+    private fun validateNumberedLists(comments: List<PsiComment>, holder: AnnotationHolder) {
+        var expectedNum = -1  // -1 = not currently inside a list
+        for (comment in comments) {
+            val rawText = comment.text
+            val stripped = rawText.removePrefix("#").let { if (it.startsWith(" ")) it.substring(1) else it }
+            val prefixLen = rawText.length - stripped.length
+
+            if (stripped.trimStart().startsWith("@")) break  // entered tag section
+
+            val match = numberedItemRe.find(stripped)
+            if (match != null) {
+                val num = match.groupValues[1].toInt()
+                val numRange = TextRange(
+                    comment.textRange.startOffset + prefixLen + match.groups[1]!!.range.first,
+                    comment.textRange.startOffset + prefixLen + match.groups[1]!!.range.last + 1,
+                )
+                if (expectedNum == -1) {
+                    if (num != 1) holder.newAnnotation(
+                        HighlightSeverity.WARNING, "Numbered list should start at 1, not $num"
+                    ).range(numRange).create()
+                } else if (num != expectedNum) {
+                    holder.newAnnotation(
+                        HighlightSeverity.WARNING, "Expected list item $expectedNum, got $num"
+                    ).range(numRange).create()
+                }
+                expectedNum = num + 1
+            } else {
+                // A blank line only, resets the expected number. Allows for multiline text following a number.
+                if (stripped.isBlank()) expectedNum = -1
+            }
+        }
     }
 
     private val tagPattern = Regex("""@(\w+)(?:\s+([^\s:]+))?""")

@@ -10,6 +10,8 @@ import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.impl.source.codeStyle.PostFormatProcessor
 import com.intellij.psi.util.PsiTreeUtil
 
+private val NUMBERED_ITEM_RE = Regex("""^\d+\. """)
+
 class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
 
     override fun processElement(source: PsiElement, settings: CodeStyleSettings): PsiElement = source
@@ -98,7 +100,6 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
             when {
                 isBlank(para.first(), indent) -> para
                 firstContent.trimStart().startsWith("```") -> para   // verbatim code block
-                firstContent.trimStart().startsWith("- ") || firstContent.trimStart().startsWith("* ") -> para  // verbatim bullet
                 else -> reflowParagraph(para, indent, available)
             }
         }
@@ -153,9 +154,10 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
                     if (current.isNotEmpty()) { result += current; current = mutableListOf() }
                     current = mutableListOf(line)
                 }
-                content.startsWith("- ") || content.startsWith("* ") -> {
-                    // Each bullet item is its own standalone paragraph so the reflow
-                    // algorithm never joins multiple items into one line.
+                content.startsWith("- ") || content.startsWith("* ") ||
+                NUMBERED_ITEM_RE.containsMatchIn(content) -> {
+                    // Each list item (bullet or numbered) is its own standalone paragraph so
+                    // the reflow algorithm never joins multiple items into one line.
                     if (current.isNotEmpty()) { result += current; current = mutableListOf() }
                     result += mutableListOf(line)
                 }
