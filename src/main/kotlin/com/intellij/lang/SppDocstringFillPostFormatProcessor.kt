@@ -98,6 +98,7 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
             when {
                 isBlank(para.first(), indent) -> para
                 firstContent.trimStart().startsWith("```") -> para   // verbatim code block
+                firstContent.trimStart().startsWith("- ") || firstContent.trimStart().startsWith("* ") -> para  // verbatim bullet
                 else -> reflowParagraph(para, indent, available)
             }
         }
@@ -151,6 +152,12 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
                 content.startsWith("@") -> {
                     if (current.isNotEmpty()) { result += current; current = mutableListOf() }
                     current = mutableListOf(line)
+                }
+                content.startsWith("- ") || content.startsWith("* ") -> {
+                    // Each bullet item is its own standalone paragraph so the reflow
+                    // algorithm never joins multiple items into one line.
+                    if (current.isNotEmpty()) { result += current; current = mutableListOf() }
+                    result += mutableListOf(line)
                 }
                 else -> current += line
             }

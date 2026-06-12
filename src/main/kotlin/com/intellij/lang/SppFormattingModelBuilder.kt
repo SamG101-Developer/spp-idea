@@ -18,6 +18,9 @@ private val BINARY_OP_TYPES = setOf(
     SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_8,
     SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_9,
     SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_10,
+    // Type-level binary ops: `or` (variant type) and `and` (intersection type)
+    SppTypes.TYPE_BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_0,
+    SppTypes.TYPE_BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_1,
 )
 
 private val BINARY_EXPR_TYPES = setOf(
@@ -32,6 +35,9 @@ private val BINARY_EXPR_TYPES = setOf(
     SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_8,
     SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_9,
     SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_10,
+    // Type-level binary expressions
+    SppTypes.TYPE_BINARY_EXPRESSION_PRECEDENCE_LEVEL_0,
+    SppTypes.TYPE_BINARY_EXPRESSION_PRECEDENCE_LEVEL_1,
 )
 
 private val CHAIN_TYPES = mapOf(
@@ -133,13 +139,20 @@ class SppBlock(
     }
 
     override fun getSpacing(child1: Block?, child2: Block): Spacing? {
+        val t1 = (child1 as? SppBlock)?.node?.elementType
+        val t2 = (child2 as? SppBlock)?.node?.elementType
+
         if (node.elementType in BRACE_BLOCK_TYPES) {
-            val t1 = (child1 as? SppBlock)?.node?.elementType
-            val t2 = (child2 as? SppBlock)?.node?.elementType
             // Empty block: collapse to "{ }" with a single space and no line breaks.
             if (t1 == SppTypes.TOKEN_LEFT_CURLY_BRACE && t2 == SppTypes.TOKEN_RIGHT_CURLY_BRACE)
                 return Spacing.createSpacing(1, 1, 0, false, 0)
         }
+
+        // The last annotation in a group must be followed by a newline before the
+        // annotated declaration. Consecutive annotations may stay on the same line.
+        if (t1 == SppTypes.ANNOTATION && t2 != SppTypes.ANNOTATION)
+            return Spacing.createSpacing(0, Int.MAX_VALUE, 1, true, 1)
+
         return Spacing.createSpacing(0, Int.MAX_VALUE, 0, true, 1)
     }
 
