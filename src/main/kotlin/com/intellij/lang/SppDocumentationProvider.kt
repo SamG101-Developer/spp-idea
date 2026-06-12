@@ -9,7 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
 
-private val NUMBERED_ITEM_RE = Regex("""^\d+\. """)
+private val NUMBERED_ITEM_RE = Regex("""^(\d+)\. """)
 
 class SppDocumentationProvider : AbstractDocumentationProvider() {
 
@@ -168,6 +168,10 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
 
         fun closeList() { if (listTag != null) { sb.append("</$listTag>"); listTag = null } }
 
+        fun isListBoundary(s: String) =
+            s.isEmpty() || s.startsWith("- ") || s.startsWith("* ") ||
+            NUMBERED_ITEM_RE.containsMatchIn(s) || s.startsWith("```")
+
         while (i < lines.size) {
             val line = lines[i]
             val trimmed = line.trim()
@@ -175,9 +179,8 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
             // Code blocks
             if (trimmed.startsWith("```")) {
                 closeList()
-                if (!inCode) {
-                    inCode = true; codeLines.clear()
-                } else {
+                if (!inCode) { inCode = true; codeLines.clear() }
+                else {
                     inCode = false
                     sb.append("<pre>").append(codeLines.joinToString("\n").escapeHtml()).append("</pre>")
                     codeLines.clear()
@@ -189,19 +192,34 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
             // Blank line (paragraph break)
             if (trimmed.isEmpty()) { closeList(); i++; continue }
 
-            // Unordered bullet list
+            // Unordered bullet list — accumulate continuation lines into the same <li>
             if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
                 if (listTag != "ul") { closeList(); sb.append("<ul>"); listTag = "ul" }
-                sb.append("<li>").append(renderInline(trimmed.substring(2))).append("</li>")
-                i++; continue
+                val item = mutableListOf(trimmed.substring(2))
+                i++
+                while (i < lines.size) {
+                    val next = lines[i].trim()
+                    if (isListBoundary(next)) break
+                    item += next; i++
+                }
+                sb.append("<li>").append(renderInline(item.joinToString(" "))).append("</li>")
+                continue
             }
 
-            // Ordered (numbered) list: "1. text", "2. text", etc.
+            // Ordered (numbered) list — accumulate continuation lines; explicit value= for Swing renderer
             val numMatch = NUMBERED_ITEM_RE.find(trimmed)
             if (numMatch != null) {
                 if (listTag != "ol") { closeList(); sb.append("<ol>"); listTag = "ol" }
-                sb.append("<li>").append(renderInline(trimmed.substring(numMatch.range.last + 1))).append("</li>")
-                i++; continue
+                val num = numMatch.groupValues[1].toInt()
+                val item = mutableListOf(trimmed.substring(numMatch.range.last + 1))
+                i++
+                while (i < lines.size) {
+                    val next = lines[i].trim()
+                    if (isListBoundary(next)) break
+                    item += next; i++
+                }
+                sb.append("<li value=\"$num\">").append(renderInline(item.joinToString(" "))).append("</li>")
+                continue
             }
 
             // Standard text paragraph
@@ -210,9 +228,7 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
             i++
             while (i < lines.size) {
                 val next = lines[i].trim()
-                if (next.isEmpty() || next.startsWith("- ") || next.startsWith("* ") ||
-                    NUMBERED_ITEM_RE.containsMatchIn(next) || next.startsWith("```")
-                ) break
+                if (isListBoundary(next)) break
                 para += next; i++
             }
             sb.append("<p>").append(renderInline(para.joinToString(" "))).append("</p>")
