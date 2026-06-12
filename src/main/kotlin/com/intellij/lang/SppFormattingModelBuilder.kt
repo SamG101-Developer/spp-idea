@@ -45,6 +45,16 @@ private val CHAIN_TYPES = mapOf(
     SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION to SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION_OP,
 )
 
+private val ANNOTATION_NEWLINE_TYPES = setOf(
+    SppTypes.SUBROUTINE_PROTOTYPE,
+    SppTypes.COROUTINE_PROTOTYPE,
+    SppTypes.FUNCTION_PROTOTYPE,
+    SppTypes.CLASS_PROTOTYPE,
+    SppTypes.SUP_PROTOTYPE_FUNCTIONS,
+    SppTypes.SUP_PROTOTYPE_EXTENSION,
+    SppTypes.MODULE_PROTOTYPE,
+)
+
 private val BRACE_BLOCK_TYPES = setOf(
     SppTypes.FUNCTION_IMPLEMENTATION,
     SppTypes.CLASS_IMPLEMENTATION,
@@ -148,9 +158,10 @@ class SppBlock(
                 return Spacing.createSpacing(1, 1, 0, false, 0)
         }
 
-        // The last annotation in a group must be followed by a newline before the
-        // annotated declaration. Consecutive annotations may stay on the same line.
-        if (t1 == SppTypes.ANNOTATION && t2 != SppTypes.ANNOTATION)
+        // Top-level declarations (fun/cls/sup) require a newline after the last annotation.
+        // Inline annotations like `!public start: S32` on class fields stay on one line.
+        if (t1 == SppTypes.ANNOTATION && t2 != SppTypes.ANNOTATION &&
+            node.elementType in ANNOTATION_NEWLINE_TYPES)
             return Spacing.createSpacing(0, Int.MAX_VALUE, 1, true, 1)
 
         return Spacing.createSpacing(0, Int.MAX_VALUE, 0, true, 1)

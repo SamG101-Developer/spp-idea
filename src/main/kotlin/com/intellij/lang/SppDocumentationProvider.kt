@@ -129,9 +129,18 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
 
         for (group in tagGroups) {
             val first = group.first().trimStart().removePrefix("@")
+            // Split on whichever comes first: whitespace or colon. This handles both
+            // "@ret: description" (colon right after tag) and "@let name: desc" (space first).
             val spIdx = first.indexOfFirst { it.isWhitespace() }
-            val tag = if (spIdx < 0) first else first.substring(0, spIdx)
-            val rest = if (spIdx < 0) "" else first.substring(spIdx + 1).trimStart()
+            val colIdx = first.indexOf(':')
+            val splitIdx = when {
+                spIdx < 0 && colIdx < 0 -> -1
+                spIdx < 0 -> colIdx
+                colIdx < 0 -> spIdx
+                else -> minOf(spIdx, colIdx)
+            }
+            val tag = if (splitIdx < 0) first else first.substring(0, splitIdx)
+            val rest = if (splitIdx < 0) "" else first.substring(splitIdx + 1).trimStart()
             val conts = group.drop(1).joinToString(" ") { it.trim() }
             val full = if (conts.isBlank()) rest else "$rest $conts".trim()
 
