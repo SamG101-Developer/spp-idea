@@ -6,6 +6,39 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.common.AbstractBlock
 
+private val BINARY_OP_TYPES = setOf(
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_0,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_1,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_2,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_3,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_4,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_5,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_6,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_7,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_8,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_9,
+    SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_10,
+)
+
+private val BINARY_EXPR_TYPES = setOf(
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_0,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_1,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_2,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_3,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_4,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_5,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_6,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_7,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_8,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_9,
+    SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_10,
+)
+
+private val CHAIN_TYPES = mapOf(
+    SppTypes.POSTFIX_EXPRESSION to SppTypes.POSTFIX_EXPRESSION_OP,
+    SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION to SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION_OP,
+)
+
 private val BRACE_BLOCK_TYPES = setOf(
     SppTypes.FUNCTION_IMPLEMENTATION,
     SppTypes.CLASS_IMPLEMENTATION,
@@ -65,7 +98,8 @@ class SppBlock(
                 return Indent.getNoneIndent()
             val rParen = node.findChildByType(SppTypes.TOKEN_RIGHT_PARENTHESIS)
             if (child.startOffset > lParen.startOffset &&
-                (rParen == null || child.startOffset < rParen.startOffset))
+                (rParen == null || child.startOffset < rParen.startOffset)
+            )
                 return Indent.getNormalIndent()
         }
 
@@ -76,9 +110,19 @@ class SppBlock(
                 return Indent.getNoneIndent()
             val rBracket = node.findChildByType(SppTypes.TOKEN_RIGHT_SQUARE_BRACKET)
             if (child.startOffset > lBracket.startOffset &&
-                (rBracket == null || child.startOffset < rBracket.startOffset))
+                (rBracket == null || child.startOffset < rBracket.startOffset)
+            )
                 return Indent.getNormalIndent()
         }
+
+        // Binary operators
+        if (node.elementType in BINARY_EXPR_TYPES && child.elementType in BINARY_OP_TYPES)
+            return Indent.getNormalIndent()
+
+        // Chaining
+        val chainOpType = CHAIN_TYPES[node.elementType]
+        if (chainOpType != null && child.elementType == chainOpType)
+            return Indent.getNormalIndent()
 
         return Indent.getNoneIndent()
     }

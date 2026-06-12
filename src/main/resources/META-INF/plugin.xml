@@ -25,5 +25,6 @@
         <lang.formatter language="S++" implementationClass="com.intellij.lang.SppFormattingModelBuilder"/>
         <postFormatProcessor implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
         <postFormatProcessor implementation="com.intellij.lang.SppDocstringFillPostFormatProcessor"/>
+        <lang.documentationProvider language="S++" implementationClass="com.intellij.lang.SppDocumentationProvider"/>
     </extensions>
 </idea-plugin>
