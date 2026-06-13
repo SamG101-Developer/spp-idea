@@ -99,7 +99,7 @@ class SppAnnotator : Annotator {
                             .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
                             .create()
 
-                    ops.any { it.postfixExpressionOpFunctionCall != null } ->
+                    ops.firstOrNull()?.postfixExpressionOpFunctionCall != null ->
                         holder
                             .newSilentAnnotation(HighlightSeverity.INFORMATION)
                             .range(element)

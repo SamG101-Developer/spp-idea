@@ -54,6 +54,7 @@ interface SppTokenSets {
             SppTypes.KEYWORD_ASYNC,
             SppTypes.KEYWORD_TRUE,
             SppTypes.KEYWORD_FALSE,
+            SppTypes.KEYWORD_RES,
             SppTypes.KEYWORD_CAPS
         )
 
