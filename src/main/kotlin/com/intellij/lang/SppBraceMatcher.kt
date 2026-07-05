@@ -2,6 +2,7 @@ package com.intellij.lang
 
 import com.intellij.lang.psi.SppTypes
 import com.intellij.psi.PsiFile
+import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
 
 class SppBraceMatcher : PairedBraceMatcher {
@@ -13,7 +14,10 @@ class SppBraceMatcher : PairedBraceMatcher {
         leftBraceType: IElementType,
         ctx: IElementType?
     ): Boolean {
-        return true
+        // Only auto add the matching bracket if there is a whitespace or comment next; prevents
+        // inserting the matching bracket when there is text right after, as we likely don't want
+        // it then (can manually add).
+        return ctx == null || ctx == TokenType.WHITE_SPACE || ctx == SppTypes.LINE_COMMENT
     }
 
     override fun getCodeConstructStart(file: PsiFile?, openingBraceOffset: Int): Int {
