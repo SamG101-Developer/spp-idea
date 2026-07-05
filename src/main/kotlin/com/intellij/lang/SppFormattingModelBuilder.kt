@@ -144,8 +144,10 @@ class SppBlock(
     }
 
     override fun getChildIndent(): Indent {
-        // "No ident" then indent by 1 indent.
-        return Indent.getNormalIndent()
+        if (node.elementType in BRACE_BLOCK_TYPES) return Indent.getNormalIndent()
+        if (node.findChildByType(SppTypes.TOKEN_LEFT_PARENTHESIS) != null) return Indent.getNormalIndent()
+        if (node.findChildByType(SppTypes.TOKEN_LEFT_SQUARE_BRACKET) != null) return Indent.getNormalIndent()
+        return Indent.getNoneIndent()
     }
 
     override fun getSpacing(child1: Block?, child2: Block): Spacing? {
