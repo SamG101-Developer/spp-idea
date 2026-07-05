@@ -72,6 +72,16 @@ private val ANNOTATION_NEWLINE_TYPES = setOf(
     SppTypes.MODULE_PROTOTYPE,
 )
 
+// = with no surrounding spaces: keyword args, object field bindings, destructure bindings
+private val ZERO_ASSIGN_SPACING_TYPES = setOf(
+    SppTypes.OBJECT_INITIALIZER_ARGUMENT_KEYWORD,
+    SppTypes.CASE_EXPRESSION_PATTERN_VARIANT_DESTRUCTURE_ATTRIBUTE_BINDING,
+    SppTypes.LOCAL_VARIABLE_DESTRUCTURE_ATTRIBUTE_BINDING,
+    SppTypes.GENERIC_ARGUMENT_COMP_KEYWORD,
+    SppTypes.GENERIC_ARGUMENT_TYPE_KEYWORD,
+    SppTypes.FUNCTION_CALL_ARGUMENT_KEYWORD,
+)
+
 private val BRACE_BLOCK_TYPES = setOf(
     SppTypes.FUNCTION_IMPLEMENTATION,
     SppTypes.CLASS_IMPLEMENTATION,
@@ -205,6 +215,18 @@ class SppBlock(
             // Empty block: collapse to "{ }" with a single space and no line breaks.
             if (t1 == SppTypes.TOKEN_LEFT_CURLY_BRACE && t2 == SppTypes.TOKEN_RIGHT_CURLY_BRACE)
                 return Spacing.createSpacing(1, 1, 0, false, 0)
+        }
+
+        // Binary operators: 1 space on either side
+        if (node.elementType in BINARY_EXPR_TYPES && (t1 in BINARY_OP_TYPES || t2 in BINARY_OP_TYPES))
+            return Spacing.createSpacing(1, 1, 0, true, 1)
+
+        // = sign: no spaces for keyword-arg / binding / destructure contexts; 1 space elsewhere
+        if (t1 == SppTypes.TOKEN_ASSIGN || t2 == SppTypes.TOKEN_ASSIGN) {
+            return if (node.elementType in ZERO_ASSIGN_SPACING_TYPES)
+                Spacing.createSpacing(0, 0, 0, false, 0)
+            else
+                Spacing.createSpacing(1, 1, 0, true, 1)
         }
 
         // Top-level declarations (fun/cls/sup) require a newline after the last annotation.
