@@ -45,6 +45,23 @@ private val CHAIN_TYPES = mapOf(
     SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION to SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION_OP,
 )
 
+private val MODULE_MAJOR_MEMBER_TYPES = setOf(
+    SppTypes.FUNCTION_PROTOTYPE,
+    SppTypes.CLASS_PROTOTYPE,
+    SppTypes.SUP_PROTOTYPE_EXTENSION,
+    SppTypes.SUP_PROTOTYPE_FUNCTIONS,
+)
+
+private val MODULE_MINOR_USE_TYPES = setOf(
+    SppTypes.GLOBAL_USE_STATEMENT,
+    SppTypes.GLOBAL_USE_VAR_STATEMENT,
+)
+
+private val MODULE_MINOR_MEMBER_TYPES = MODULE_MINOR_USE_TYPES + setOf(
+    SppTypes.GLOBAL_TYPE_STATEMENT,
+    SppTypes.GLOBAL_CMP_STATEMENT,
+)
+
 private val ANNOTATION_NEWLINE_TYPES = setOf(
     SppTypes.SUBROUTINE_PROTOTYPE,
     SppTypes.COROUTINE_PROTOTYPE,
@@ -153,6 +170,36 @@ class SppBlock(
     override fun getSpacing(child1: Block?, child2: Block): Spacing? {
         val t1 = (child1 as? SppBlock)?.node?.elementType
         val t2 = (child2 as? SppBlock)?.node?.elementType
+
+        // Module-level spacing rules
+        if (node.elementType == SppTypes.MODULE_IMPLEMENTATION && t2 == SppTypes.MODULE_MEMBER) {
+            val inner1 = if (t1 == SppTypes.MODULE_MEMBER) (child1 as SppBlock).node.firstChildNode?.elementType else null
+            val inner2 = (child2 as SppBlock).node.firstChildNode?.elementType
+
+            if (inner2 != null && inner2 in MODULE_MAJOR_MEMBER_TYPES) {
+                // fun/sup/cls: exactly 1 blank line before (not before the first member)
+                if (child1 != null) return Spacing.createSpacing(0, 0, 2, false, 0)
+            } else if (inner2 != null && inner2 in MODULE_MINOR_MEMBER_TYPES) {
+                val sameCategory = inner1 != null && inner1 in MODULE_MINOR_MEMBER_TYPES &&
+                    ((inner1 in MODULE_MINOR_USE_TYPES && inner2 in MODULE_MINOR_USE_TYPES) || inner1 == inner2)
+                if (sameCategory) {
+                    // Same category (use/use, cmp/cmp, type/type): 0 or 1 blank lines
+                    return Spacing.createSpacing(0, Int.MAX_VALUE, 1, true, 1)
+                } else if (child1 != null) {
+                    // Category change or preceded by major member: exactly 1 blank line
+                    return Spacing.createSpacing(0, 0, 2, false, 0)
+                }
+            }
+        }
+
+        // Sup-level: fun must have exactly 1 blank line before (not after {)
+        if (node.elementType == SppTypes.SUP_IMPLEMENTATION &&
+            t1 == SppTypes.SUP_MEMBER && t2 == SppTypes.SUP_MEMBER) {
+            val inner2 = (child2 as SppBlock).node.firstChildNode?.elementType
+            if (inner2 == SppTypes.FUNCTION_PROTOTYPE) {
+                return Spacing.createSpacing(0, 0, 2, false, 0)
+            }
+        }
 
         if (node.elementType in BRACE_BLOCK_TYPES) {
             // Empty block: collapse to "{ }" with a single space and no line breaks.
