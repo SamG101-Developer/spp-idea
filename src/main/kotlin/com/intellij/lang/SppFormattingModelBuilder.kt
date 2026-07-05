@@ -172,20 +172,29 @@ class SppBlock(
 
         // Module-level spacing rules
         if (node.elementType == SppTypes.MODULE_IMPLEMENTATION && t2 == SppTypes.MODULE_MEMBER) {
-            val inner1 =
-                if (t1 == SppTypes.MODULE_MEMBER) (child1 as SppBlock).node.firstChildNode?.elementType else null
+            // Walk backwards past any trailing comments to find the real previous MODULE_MEMBER.
+            val prevMemberNode: ASTNode? = when (t1) {
+                SppTypes.MODULE_MEMBER -> (child1 as SppBlock).node
+                null -> null
+                else -> {
+                    var sib = (child1 as SppBlock).node.treePrev
+                    while (sib != null && sib.elementType != SppTypes.MODULE_MEMBER) sib = sib.treePrev
+                    sib
+                }
+            }
+            val inner1 = prevMemberNode?.firstChildNode?.elementType
             val inner2 = (child2 as SppBlock).node.firstChildNode?.elementType
 
             if (inner2 != null && inner2 in MODULE_MAJOR_MEMBER_TYPES) {
                 // fun/sup/cls: exactly 1 blank line before (not before the first member)
-                if (child1 != null) return Spacing.createSpacing(0, 0, 2, false, 0)
+                if (inner1 != null) return Spacing.createSpacing(0, 0, 2, false, 0)
             } else if (inner2 != null && inner2 in MODULE_MINOR_MEMBER_TYPES) {
                 val sameCategory =
                     inner1 != null && inner1 in MODULE_MINOR_MEMBER_TYPES && ((inner1 in MODULE_MINOR_USE_TYPES && inner2 in MODULE_MINOR_USE_TYPES) || inner1 == inner2)
                 if (sameCategory) {
                     // Same category (use/use, cmp/cmp, type/type): 0 or 1 blank lines
                     return Spacing.createSpacing(0, Int.MAX_VALUE, 1, true, 1)
-                } else if (child1 != null) {
+                } else if (inner1 != null) {
                     // Category change or preceded by major member: exactly 1 blank line
                     return Spacing.createSpacing(0, 0, 2, false, 0)
                 }
