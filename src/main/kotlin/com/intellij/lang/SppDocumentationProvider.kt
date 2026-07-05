@@ -4,6 +4,8 @@ import com.intellij.lang.documentation.AbstractDocumentationProvider
 import com.intellij.lang.documentation.DocumentationMarkup
 import com.intellij.lang.psi.*
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -269,9 +271,85 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
         return sb.toString()
     }
 
+    private fun colorizeSignature(sig: String): String {
+        val scheme = EditorColorsManager.getInstance().globalScheme
+        val identRe = Regex("[A-Za-z_][A-Za-z0-9_]*")
+        val tokenRe = Regex("""[A-Za-z_][A-Za-z0-9_]*|->|::|[(){}\[\],:]|\s+|.""")
+        val sppKeywords = setOf("fun", "cor", "cls", "sup", "mut", "ref", "let", "self", "Self")
+
+        fun span(text: String, key: TextAttributesKey): String {
+            val color = scheme.getAttributes(key)?.foregroundColor
+                ?: return text.escapeHtml()
+            return "<span style=\"color:#%02x%02x%02x\">${text.escapeHtml()}</span>"
+                .format(color.red, color.green, color.blue)
+        }
+
+        enum class S { START, AFTER_FN_KW, AFTER_CLASS_KW, AFTER_NAME, PARAM_NAME, PARAM_TYPE, RETURN_TYPE }
+        var state = S.START
+        var parenDepth = 0
+        val sb = StringBuilder()
+
+        for (token in tokenRe.findAll(sig).map { it.value }) {
+            if (token.isBlank()) { sb.append(token); continue }
+            val out = when (state) {
+                S.START -> when (token) {
+                    "fun", "cor" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = S.AFTER_FN_KW }
+                    "cls", "sup" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = S.AFTER_CLASS_KW }
+                    else -> token.escapeHtml()
+                }
+                S.AFTER_FN_KW -> if (token.matches(identRe))
+                    span(token, SppSyntaxHighlighter.FUNCTION_CALL).also { state = S.AFTER_NAME }
+                else token.escapeHtml()
+                S.AFTER_CLASS_KW -> if (token.matches(identRe))
+                    span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER).also { state = S.AFTER_NAME }
+                else token.escapeHtml()
+                S.AFTER_NAME -> when (token) {
+                    "(" -> { parenDepth++; state = S.PARAM_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    "->", ":" -> { state = S.RETURN_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
+                    else -> token.escapeHtml()
+                }
+                S.PARAM_NAME -> when (token) {
+                    "," -> span(token, SppSyntaxHighlighter.OPERATOR)
+                    ":" -> { state = S.PARAM_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
+                    "(" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ")" -> { if (--parenDepth == 0) state = S.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    else -> when {
+                        token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
+                        token.matches(identRe) -> span(token, SppSyntaxHighlighter.ATTRIBUTE)
+                        else -> token.escapeHtml()
+                    }
+                }
+                S.PARAM_TYPE -> when (token) {
+                    "," -> { state = S.PARAM_NAME; span(token, SppSyntaxHighlighter.OPERATOR) }
+                    "(" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ")" -> { if (--parenDepth == 0) state = S.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    "[", "]" -> span(token, SppSyntaxHighlighter.BRACKET)
+                    "::", "->", ":" -> span(token, SppSyntaxHighlighter.OPERATOR)
+                    else -> when {
+                        token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
+                        token.matches(identRe) -> span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER)
+                        else -> token.escapeHtml()
+                    }
+                }
+                S.RETURN_TYPE -> when (token) {
+                    "(", "[" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ")", "]" -> { parenDepth--; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ",", "::", ":", "->" -> span(token, SppSyntaxHighlighter.OPERATOR)
+                    else -> when {
+                        token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
+                        token.matches(identRe) -> span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER)
+                        else -> token.escapeHtml()
+                    }
+                }
+            }
+            sb.append(out)
+        }
+        return sb.toString()
+    }
+
     private fun buildHtml(signature: String, doc: Docstring): String = buildString {
         append(DocumentationMarkup.DEFINITION_START)
-        append(signature.escapeHtml())
+        append(colorizeSignature(signature))
         append(DocumentationMarkup.DEFINITION_END)
 
         append(DocumentationMarkup.CONTENT_START)
