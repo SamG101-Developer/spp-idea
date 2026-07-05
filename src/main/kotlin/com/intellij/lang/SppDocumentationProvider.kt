@@ -13,6 +13,8 @@ import com.intellij.psi.PsiWhiteSpace
 
 private val NUMBERED_ITEM_RE = Regex("""^(\d+)\. """)
 
+private enum class ColorizeState { START, AFTER_FN_KW, AFTER_CLASS_KW, AFTER_NAME, PARAM_NAME, PARAM_TYPE, RETURN_TYPE }
+
 class SppDocumentationProvider : AbstractDocumentationProvider() {
 
     override fun getCustomDocumentationElement(
@@ -284,57 +286,56 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
                 .format(color.red, color.green, color.blue)
         }
 
-        enum class S { START, AFTER_FN_KW, AFTER_CLASS_KW, AFTER_NAME, PARAM_NAME, PARAM_TYPE, RETURN_TYPE }
-        var state = S.START
+        var state = ColorizeState.START
         var parenDepth = 0
         val sb = StringBuilder()
 
         for (token in tokenRe.findAll(sig).map { it.value }) {
             if (token.isBlank()) { sb.append(token); continue }
             val out = when (state) {
-                S.START -> when (token) {
-                    "fun", "cor" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = S.AFTER_FN_KW }
-                    "cls", "sup" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = S.AFTER_CLASS_KW }
+                ColorizeState.START -> when (token) {
+                    "fun", "cor" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = ColorizeState.AFTER_FN_KW }
+                    "cls", "sup" -> span(token, SppSyntaxHighlighter.KEYWORD).also { state = ColorizeState.AFTER_CLASS_KW }
                     else -> token.escapeHtml()
                 }
-                S.AFTER_FN_KW -> if (token.matches(identRe))
-                    span(token, SppSyntaxHighlighter.FUNCTION_CALL).also { state = S.AFTER_NAME }
+                ColorizeState.AFTER_FN_KW -> if (token.matches(identRe))
+                    span(token, SppSyntaxHighlighter.FUNCTION_CALL).also { state = ColorizeState.AFTER_NAME }
                 else token.escapeHtml()
-                S.AFTER_CLASS_KW -> if (token.matches(identRe))
-                    span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER).also { state = S.AFTER_NAME }
+                ColorizeState.AFTER_CLASS_KW -> if (token.matches(identRe))
+                    span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER).also { state = ColorizeState.AFTER_NAME }
                 else token.escapeHtml()
-                S.AFTER_NAME -> when (token) {
-                    "(" -> { parenDepth++; state = S.PARAM_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
-                    "->", ":" -> { state = S.RETURN_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
+                ColorizeState.AFTER_NAME -> when (token) {
+                    "(" -> { parenDepth++; state = ColorizeState.PARAM_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    "->", ":" -> { state = ColorizeState.RETURN_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
                     else -> token.escapeHtml()
                 }
-                S.PARAM_NAME -> when (token) {
+                ColorizeState.PARAM_NAME -> when (token) {
                     "," -> span(token, SppSyntaxHighlighter.OPERATOR)
-                    ":" -> { state = S.PARAM_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
+                    ":" -> { state = ColorizeState.PARAM_TYPE; span(token, SppSyntaxHighlighter.OPERATOR) }
                     "(" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
-                    ")" -> { if (--parenDepth == 0) state = S.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ")" -> { if (--parenDepth == 0) state = ColorizeState.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    "&" -> span(token, SppSyntaxHighlighter.OPERATOR)
                     else -> when {
                         token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
-                        token.matches(identRe) -> span(token, SppSyntaxHighlighter.ATTRIBUTE)
                         else -> token.escapeHtml()
                     }
                 }
-                S.PARAM_TYPE -> when (token) {
-                    "," -> { state = S.PARAM_NAME; span(token, SppSyntaxHighlighter.OPERATOR) }
+                ColorizeState.PARAM_TYPE -> when (token) {
+                    "," -> { state = ColorizeState.PARAM_NAME; span(token, SppSyntaxHighlighter.OPERATOR) }
                     "(" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
-                    ")" -> { if (--parenDepth == 0) state = S.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
+                    ")" -> { if (--parenDepth == 0) state = ColorizeState.AFTER_NAME; span(token, SppSyntaxHighlighter.BRACKET) }
                     "[", "]" -> span(token, SppSyntaxHighlighter.BRACKET)
-                    "::", "->", ":" -> span(token, SppSyntaxHighlighter.OPERATOR)
+                    "::", "->", ":", "&" -> span(token, SppSyntaxHighlighter.OPERATOR)
                     else -> when {
                         token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
                         token.matches(identRe) -> span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER)
                         else -> token.escapeHtml()
                     }
                 }
-                S.RETURN_TYPE -> when (token) {
+                ColorizeState.RETURN_TYPE -> when (token) {
                     "(", "[" -> { parenDepth++; span(token, SppSyntaxHighlighter.BRACKET) }
                     ")", "]" -> { parenDepth--; span(token, SppSyntaxHighlighter.BRACKET) }
-                    ",", "::", ":", "->" -> span(token, SppSyntaxHighlighter.OPERATOR)
+                    ",", "::", ":", "->", "&" -> span(token, SppSyntaxHighlighter.OPERATOR)
                     else -> when {
                         token in sppKeywords -> span(token, SppSyntaxHighlighter.KEYWORD)
                         token.matches(identRe) -> span(token, SppSyntaxHighlighter.TYPE_IDENTIFIER)

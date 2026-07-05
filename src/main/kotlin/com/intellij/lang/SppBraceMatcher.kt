@@ -20,7 +20,11 @@ class SppBraceMatcher : PairedBraceMatcher {
         return ctx == null || ctx == TokenType.WHITE_SPACE || ctx == SppTypes.LINE_COMMENT
     }
 
-    override fun getCodeConstructStart(file: PsiFile?, openingBraceOffset: Int): Int {
+    override fun getCodeConstructStart(
+        file: PsiFile?, openingBraceOffset: Int
+    ): Int {
+        // For now, just return the opening brace offset. This is used for code folding and other
+        // features.
         return openingBraceOffset
     }
 }
