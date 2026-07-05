@@ -10,30 +10,63 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 import kotlin.collections.orEmpty
 
+/**
+ * The `SppDocstringAnnotator` provides the default docstring templates, and warning for missing or invalid docstrings.
+ * It hooks into the "tag" usage system, using things like `\@let` etc. There are
+ */
 class SppDocstringAnnotator : Annotator {
 
     private data class DocTag(val tag: String, val name: String?, val nameRange: TextRange?)
 
+    /**
+     * Analyse the given docstring on the element and create any warnings based on missing docstrings or invalid tags
+     * provided in the docstring.
+     */
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         when (element) {
+            // Validate the subroutine prototypes' docstrings as a "function docstring"
             is SppSubroutinePrototype -> validateFunctionProto(
-                element.functionImplementation, element.functionParameterGroup,
-                element.genericParameterGroup, element.identifier, holder
+                element.functionImplementation,
+                element.functionParameterGroup,
+                element.genericParameterGroup,
+                element.identifier,
+                holder
             )
+
+            // Validate the coroutines' prototypes' docstrings as a "function docstring"
             is SppCoroutinePrototype -> validateFunctionProto(
-                element.functionImplementation, element.functionParameterGroup,
-                element.genericParameterGroup, element.identifier, holder
+                element.functionImplementation,
+                element.functionParameterGroup,
+                element.genericParameterGroup,
+                element.identifier,
+                holder
             )
+
+            // Validate the class prototypes' docstrings as a "class docstring"
             is SppClassPrototype -> validateClassProto(element, holder)
+
+            // Validate the sup prototypes' docstrings as a "sup docstring"
             is SppSupPrototypeFunctions -> validateSupProto(
                 element.supImplementation, element.typeExpression, holder
             )
+
+            // Validate the sup-ext prototypes' docstrings as a "sup docstring" (with the name, not superclass)
             is SppSupPrototypeExtension -> validateSupProto(
                 element.supImplementation, element.typeExpressionList.first(), holder
             )
         }
     }
 
+    /**
+     * Validate the function docstrings, with the possible tags:
+     * - `\@let` -> function parameters
+     * - `\@type` -> generic type parameters
+     * - `\@comp` -> generic comp parameters
+     *
+     * Todo: The return type is not validated yet, but will have the following future validation. If Void, omit it and
+     *  require it be omitted, otherwise require it to be included. This will require the LSP, for aliases against
+     *  `Void`.
+     */
     private fun validateFunctionProto(
         impl: SppFunctionImplementation,
         paramGroup: SppFunctionParameterGroup,
@@ -41,19 +74,26 @@ class SppDocstringAnnotator : Annotator {
         nameElem: PsiElement,
         holder: AnnotationHolder,
     ) {
+        // Collect the docstring for the function, and create a warning if it is empty - all functions should be
+        // documented. Todo: Create a "builtin" annotation that can avoid this ie "!nodoc(reason: StrView)" or similar.
         val docComments = collectDocstringComments(impl)
         if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring")
-                .range(nameElem).create()
+            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(nameElem).create()
             return
         }
+
+        // Perform a validation on any numeric lists in the docstring.
         validateNumberedLists(docComments, holder)
 
+        // Parse the docstring for any tags, and collect the names of the documented parameters, type generics, and comp
+        // generics.
         val tags = parseTags(docComments)
         val docLetNames = tags.filter { it.tag == "let" }.mapNotNull { it.name }.toSet()
         val docTypeNames = tags.filter { it.tag == "type" }.mapNotNull { it.name }.toSet()
         val docCmpNames = tags.filter { it.tag == "cmp" }.mapNotNull { it.name }.toSet()
 
+        // Get the actual parameters, type generics and comp generics, so they can be checked against the documented
+        // ones for matches / invalid.
         val actualParams = paramGroup.functionParameterList.mapNotNull { paramNameAndElement(it) }
         val actualTypeGenerics = mutableListOf<Pair<String, PsiElement>>()
         val actualCmpGenerics = mutableListOf<Pair<String, PsiElement>>()
@@ -62,36 +102,38 @@ class SppDocstringAnnotator : Annotator {
             genericCompNameAndElement(gp)?.let { actualCmpGenerics += it }
         }
 
+        // Extract the names of the actual asts.
         val actualParamNames = actualParams.map { it.first }.toSet()
         val actualTypeNames = actualTypeGenerics.map { it.first }.toSet()
         val actualCmpNames = actualCmpGenerics.map { it.first }.toSet()
 
+        // Check for any actual asts that have not been documented.
         for ((name, elem) in actualParams) {
             if (name !in docLetNames) holder.newAnnotation(
-                HighlightSeverity.WARNING, "Parameter '$name' is not documented — add @let $name to the docstring"
+                HighlightSeverity.WARNING, "Parameter '$name' is not documented - add @let $name to the docstring"
             ).range(elem).create()
         }
         for ((name, elem) in actualTypeGenerics) {
             if (name !in docTypeNames) holder.newAnnotation(
-                HighlightSeverity.WARNING, "Generic type '$name' is not documented — add @type $name to the docstring"
+                HighlightSeverity.WARNING, "Type generic '$name' is not documented - add @type $name to the docstring"
             ).range(elem).create()
         }
         for ((name, elem) in actualCmpGenerics) {
             if (name !in docCmpNames) holder.newAnnotation(
-                HighlightSeverity.WARNING,
-                "Compile-time generic '$name' is not documented — add @cmp $name to the docstring"
+                HighlightSeverity.WARNING, "Comp generic '$name' is not documented - add @cmp $name to the docstring"
             ).range(elem).create()
         }
 
-        for (tag in tags.filter { it.tag == "let" && it.name != null && it.name !in actualParamNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No parameter named '${tag.name}'")
-                .range(tag.nameRange!!).create()
-        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No type generic parameter named '${tag.name}'")
-                .range(tag.nameRange!!).create()
-        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'")
-                .range(tag.nameRange!!).create()
+        // Check for any documented tags that do not have matching asts.
+        for (tag in tags.filter { it.tag == "let" && it.name != null && it.name !in actualParamNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No parameter named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No type generic parameter named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
     }
 
     private fun validateClassProto(proto: SppClassPrototype, holder: AnnotationHolder) {
@@ -100,8 +142,7 @@ class SppDocstringAnnotator : Annotator {
 
         val docComments = collectDocstringComments(impl)
         if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring")
-                .range(proto.upperIdentifier).create()
+            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(proto.upperIdentifier).create()
             return
         }
         validateNumberedLists(docComments, holder)
@@ -111,9 +152,8 @@ class SppDocstringAnnotator : Annotator {
         val docTypeNames = tags.filter { it.tag == "type" }.mapNotNull { it.name }.toSet()
         val docCmpNames = tags.filter { it.tag == "cmp" }.mapNotNull { it.name }.toSet()
 
-        val actualAttrs = impl.classMemberList
-            .map { it.classAttribute }
-            .map { Pair(it.identifier.text, it.identifier as PsiElement) }
+        val actualAttrs =
+            impl.classMemberList.map { it.classAttribute }.map { Pair(it.identifier.text, it.identifier as PsiElement) }
 
         val actualTypeGenerics = mutableListOf<Pair<String, PsiElement>>()
         val actualCmpGenerics = mutableListOf<Pair<String, PsiElement>>()
@@ -138,19 +178,20 @@ class SppDocstringAnnotator : Annotator {
         }
         for ((name, elem) in actualCmpGenerics) {
             if (name !in docCmpNames) holder.newAnnotation(
-                HighlightSeverity.WARNING, "Compile-time generic '$name' is not documented — add @cmp $name to the docstring"
+                HighlightSeverity.WARNING,
+                "Compile-time generic '$name' is not documented — add @cmp $name to the docstring"
             ).range(elem).create()
         }
 
-        for (tag in tags.filter { it.tag == "let" && it.name != null && it.name !in actualAttrNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No attribute named '${tag.name}'")
-                .range(tag.nameRange!!).create()
-        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No type generic parameter named '${tag.name}'")
-                .range(tag.nameRange!!).create()
-        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'")
-                .range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "let" && it.name != null && it.name !in actualAttrNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No attribute named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No type generic parameter named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
     }
 
     private fun validateSupProto(
@@ -160,15 +201,14 @@ class SppDocstringAnnotator : Annotator {
     ) {
         val docComments = collectDocstringComments(impl)
         if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring")
-                .range(nameElem).create()
+            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(nameElem).create()
             return
         }
         validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
         val docTypeNames = tags.filter { it.tag == "type" }.mapNotNull { it.name }.toSet()
-        val docCmpNames  = tags.filter { it.tag == "cmp"  }.mapNotNull { it.name }.toSet()
+        val docCmpNames = tags.filter { it.tag == "cmp" }.mapNotNull { it.name }.toSet()
 
         val actualTypeStatements = impl.supMemberList.mapNotNull { it.supTypeStatement }
             .map { Pair(it.typeStatement.upperIdentifier.text, it.typeStatement.upperIdentifier as PsiElement) }
@@ -176,7 +216,7 @@ class SppDocstringAnnotator : Annotator {
             .map { Pair(it.cmpStatement.identifier.text, it.cmpStatement.identifier as PsiElement) }
 
         val actualTypeNames = actualTypeStatements.map { it.first }.toSet()
-        val actualCmpNames  = actualCmpStatements.map  { it.first }.toSet()
+        val actualCmpNames = actualCmpStatements.map { it.first }.toSet()
 
         for ((name, elem) in actualTypeStatements) {
             if (name !in docTypeNames) holder.newAnnotation(
@@ -189,12 +229,12 @@ class SppDocstringAnnotator : Annotator {
             ).range(elem).create()
         }
 
-        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No type named '${tag.name}'")
-                .range(tag.nameRange!!).create()
-        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames })
-            holder.newAnnotation(HighlightSeverity.WARNING, "No constant named '${tag.name}'")
-                .range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "type" && it.name != null && it.name !in actualTypeNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No type named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
+        for (tag in tags.filter { it.tag == "cmp" && it.name != null && it.name !in actualCmpNames }) holder.newAnnotation(
+            HighlightSeverity.WARNING, "No constant named '${tag.name}'"
+        ).range(tag.nameRange!!).create()
     }
 
     private val numberedItemRe = Regex("""^(\d+)\. """)
