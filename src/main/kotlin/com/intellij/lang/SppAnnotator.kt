@@ -117,12 +117,14 @@ class SppAnnotator : Annotator {
             is SppLiteralString -> {
                 holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
                     .textAttributes(SppSyntaxHighlighter.STRING).create()
+                annotateEscapeSequences(element, holder)
             }
 
             // Special highlighting for char literals (use string highlighting).
             is SppLiteralChar -> {
                 holder.newSilentAnnotation(HighlightSeverity.INFORMATION).range(element)
                     .textAttributes(SppSyntaxHighlighter.STRING).create()
+                annotateEscapeSequences(element, holder)
             }
 
             // Special highlighting for annotations.
@@ -148,6 +150,27 @@ class SppAnnotator : Annotator {
 
     private val docstringTagPattern = Regex("""(@\w+)(?:\s+([^\s:]+))?""")
     private val inlineCodePattern = Regex("""`[^`\n]+`""")
+
+    // Recognised escape sequences within string/char literals: \n \t \r \0 \\ \' \"
+    private val escapeSequencePattern = Regex("""\\[ntr0\\'"]""")
+
+    // Highlights the recognised escape sequences inside a string or char literal, layered on top of the
+    // literal's base STRING colour (set by the caller just before this).
+    private fun annotateEscapeSequences(element: PsiElement, holder: AnnotationHolder) {
+        val text = element.text
+        if (text.length < 2) return
+        val base = element.textRange.startOffset
+
+        // The lexer's literal regex never allows the delimiter quote to appear mid-body, so the last character
+        // is always the closing quote itself - never part of an escape. Exclude it so a trailing backslash
+        // (e.g. the literal "\" , whose body is a single backslash) isn't mistaken for an escaped delimiter.
+        val body = text.substring(0, text.length - 1)
+        for (match in escapeSequencePattern.findAll(body)) {
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(base + match.range.first, base + match.range.last + 1))
+                .textAttributes(SppSyntaxHighlighter.VALID_ESCAPE).create()
+        }
+    }
 
     private fun annotateDocstringTags(comment: PsiElement, holder: AnnotationHolder) {
         val text = comment.text

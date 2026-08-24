@@ -27,9 +27,9 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
     override fun generateDoc(element: PsiElement?, originalElement: PsiElement?): String? {
         val target = element ?: originalElement ?: return null
         return when (val proto = findProto(target)) {
-            is SppSubroutinePrototype -> docFor(proto.functionImplementation, proto.sigText("fun"))
-            is SppCoroutinePrototype -> docFor(proto.functionImplementation, proto.sigText("cor"))
-            is SppClassPrototype -> docFor(proto.classImplementation, proto.sigText("cls"))
+            is SppSubroutinePrototype -> docFor(proto.functionImplementation ?: return null, proto.sigText("fun"))
+            is SppCoroutinePrototype -> docFor(proto.functionImplementation ?: return null, proto.sigText("cor"))
+            is SppClassPrototype -> docFor(proto.classImplementation ?: return null, proto.sigText("cls"))
             is SppSupPrototypeFunctions -> docFor(proto.supImplementation, proto.sigText("sup"))
             is SppSupPrototypeExtension -> docFor(proto.supImplementation, proto.sigText("sup"))
             else -> null

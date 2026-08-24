@@ -14,15 +14,14 @@
     tokens = [
         line_comment = "regexp:#.*"
 
-        lexeme_regex = "regexp:r\".*\""
         lexeme_identifier = "regexp:[a-z][_a-zA-Z0-9]*"
         lexeme_upper_identifier = "regexp:[A-Z][_a-zA-Z0-9]*"
         lexeme_bin_digits = "regexp:0b[01]+"
         lexeme_oct_digits = "regexp:0o[0-7]+"
         lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
         lexeme_dec_digits = "regexp:[0-9]+"
-        lexeme_single_quote_str = "regexp:b?'[^']+'"
-        lexeme_double_quote_str = "regexp:b?\"[^\"]*\""
+        lexeme_single_quote_str = "regexp:b?'[^'\r\n]+'"
+        lexeme_double_quote_str = "regexp:b?\"[^\"\r\n]*\""
 
         token_left_curly_brace = "{"
         token_right_curly_brace = "}"
@@ -125,10 +124,10 @@ module_member ::=
     global_type_statement |
     global_cmp_statement
 
-class_prototype ::= (annotation)* keyword_cls upper_identifier generic_parameter_group? class_implementation
+class_prototype ::= (annotation)* keyword_cls upper_identifier generic_parameter_group? class_implementation {pin=3}
 class_implementation ::= token_left_curly_brace (class_member)* token_right_curly_brace
 class_member ::= class_attribute
-class_attribute ::= (annotation)* identifier token_colon type_expression class_attribute_default_value?
+class_attribute ::= (annotation)* identifier token_colon type_expression class_attribute_default_value? {pin=2}
 class_attribute_default_value ::= token_assign expression
 
 sup_prototype_functions ::= keyword_sup generic_parameter_group? type_expression sup_implementation
@@ -139,8 +138,8 @@ sup_type_statement ::= (annotation)* type_statement
 sup_cmp_statement ::= (annotation)* cmp_statement
 
 function_prototype ::= subroutine_prototype | coroutine_prototype
-subroutine_prototype ::= (annotation)* keyword_cmp? keyword_fun identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
-coroutine_prototype ::= (annotation)* keyword_cor identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation
+subroutine_prototype ::= (annotation)* keyword_cmp? keyword_fun identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation {pin=4}
+coroutine_prototype ::= (annotation)* keyword_cor identifier generic_parameter_group? function_parameter_group token_arrow_right type_expression function_implementation {pin=3}
 function_implementation ::= token_left_curly_brace (function_member)* token_right_curly_brace
 function_member ::= statement
 
@@ -323,7 +322,7 @@ gen_expression_with_value ::= keyword_gen convention? expression
 gen_expression_without_value ::= keyword_gen
 gen_unroll_expression ::= keyword_gen keyword_with expression
 
-closure_expression ::= token_cor? closure_expression_parameter_and_capture_group expression
+closure_expression ::= keyword_cor? closure_expression_parameter_and_capture_group expression
 closure_expression_parameter_and_capture_group ::= token_left_parenthesis closure_expression_parameter_group closure_expression_capture_group? token_right_parenthesis
 closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
 closure_expression_capture ::= convention? (identifier | self_identifier)
@@ -347,7 +346,7 @@ assignment_target ::= assignment_target_postfix_expression
 assignment_target_postfix_expression ::= assignment_target_primary_expression assignment_target_postfix_expression_op*
 assignment_target_postfix_expression_op ::=
     postfix_expression_op_deref |
-    postfix_expression_op_function_call
+    postfix_expression_op_function_call |
     postfix_expression_op_static_member_access |
     postfix_expression_op_runtime_member_access |
     postfix_expression_op_slice |
@@ -371,8 +370,8 @@ local_variable_destructure_object ::= type_expression_simple token_left_parenthe
 local_variable_destructure_tuple ::= token_left_parenthesis (local_variable_nested_for_destructure_tuple (token_comma local_variable_nested_for_destructure_tuple)*)? token_right_parenthesis
 local_variable_destructure_skip_single_argument ::= token_underscore
 local_variable_destructure_skip_multiple_arguments ::= token_double_dot
-local_variable_destructure_attribute_binding ::= identifier token_assign local_variable_nested_for_attribute_binding
-local_variable_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias?
+local_variable_destructure_attribute_binding ::= identifier token_assign local_variable_nested_for_attribute_binding {pin=2}
+local_variable_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias? {pin=2}
 local_variable_single_identifier_alias ::= keyword_as identifier
 local_variable_nested_for_destructure_array ::=
     local_variable_destructure_skip_single_argument |

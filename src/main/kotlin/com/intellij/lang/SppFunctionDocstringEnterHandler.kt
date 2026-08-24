@@ -6,9 +6,11 @@ import com.intellij.lang.psi.*
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -33,19 +35,21 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
 
         // There are a few different auto docstrings supported, including
         // and limited to functions, sup-function blocks and classes. More
-        // may be introduced should the need arise.
-        val lineStart = editor.document.getLineStartOffset(editor.document.getLineNumber(offset))
+        // may be introduced should the need arise. They only fire when the
+        // user has just typed a bare "#" as the first line of the body and
+        // pressed Enter - plain Enter inside braces otherwise just makes a
+        // new line, same as anywhere else.
+        val curLineNum = editor.document.getLineNumber(offset)
         val inserted = tryFunction(element, editor, offset)
             ?: trySupFunctions(element, editor, offset)
             ?: tryClass(element, editor, offset)
 
-        // Autoformat to apply indentation rules, then reposition the caret
-        // to the first "# " on the docstring's opening line.
+        // Autoformat to apply indentation rules, then reposition the caret to the end of the bare-hash line
+        // the user typed - the rest of the framework was filled in below it.
         if (inserted != null) {
             PsiDocumentManager.getInstance(file.project).commitDocument(editor.document)
             CodeStyleManager.getInstance(file.project).reformatText(file, inserted.startOffset, inserted.endOffset)
-            val firstHash = editor.document.text.indexOf('#', lineStart)
-            if (firstHash >= 0) editor.caretModel.moveToOffset(firstHash + "# ".length)
+            if (curLineNum > 0) editor.caretModel.moveToOffset(editor.document.getLineEndOffset(curLineNum - 1))
         } else {
             continueComment(editor, offset)
         }
@@ -62,7 +66,7 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         // get the prototype information, but we must be inside the function
         // implementation to activate the docstring.
         val funcImpl = PsiTreeUtil.getParentOfType(element, SppFunctionImplementation::class.java) ?: return null
-        if (hasDocstring(funcImpl)) return null
+        if (!hasBareHashStarter(funcImpl, editor, offset)) return null
 
         // If this is beneath existing members, don't add the docs string.
         // Only at the top of the function.
@@ -83,14 +87,14 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
 
         // Extract the function parameter list from the function prototype.
         val funcParams: List<SppFunctionParameter> = when (proto) {
-            is SppSubroutinePrototype -> proto.functionParameterGroup.functionParameterList
-            is SppCoroutinePrototype -> proto.functionParameterGroup.functionParameterList
+            is SppSubroutinePrototype -> (proto.functionParameterGroup ?: return null).functionParameterList
+            is SppCoroutinePrototype -> (proto.functionParameterGroup ?: return null).functionParameterList
             else -> emptyList()
         }
 
-        // Build the docstring from the nodes gathered above.
+        // Build the docstring from the nodes gathered above. The description line was already typed by the
+        // user (the bare "#" that triggered this), so only the tag lines need to be filled in.
         val text = buildString {
-            append(descriptionLine())
             for (gp in genericParams) append(genericParamLine(gp))
             for (fp in funcParams) append(funcParamLine(fp))
             append(funcReturnLine())
@@ -114,7 +118,7 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         // Don't fire when the cursor is inside a nested function body within this sup.
         val nestedFunc = PsiTreeUtil.getParentOfType(element, SppFunctionImplementation::class.java)
         if (nestedFunc != null && PsiTreeUtil.isAncestor(supImpl, nestedFunc, true)) return null
-        if (hasDocstring(supImpl)) return null
+        if (!hasBareHashStarter(supImpl, editor, offset)) return null
 
         // If this is beneath existing members, don't add the docs string.
         // Only at the top of the superimposition.
@@ -124,7 +128,6 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         }
 
         val text = buildString {
-            append(descriptionLine())
             for (member in supImpl.supMemberList) {
                 member.supTypeStatement?.typeStatement?.let { append(supTypeStatementLine(it.upperIdentifier.text)) }
                 member.supCmpStatement?.cmpStatement?.let { append(supCmpStatementLine(it.identifier.text)) }
@@ -143,7 +146,7 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         // prototype information, but we must be inside the class implementation to
         // activate the docstring.
         val classImpl = PsiTreeUtil.getParentOfType(element, SppClassImplementation::class.java) ?: return null
-        if (hasDocstring(classImpl)) return null
+        if (!hasBareHashStarter(classImpl, editor, offset)) return null
         val proto = classImpl.parent as? SppClassPrototype ?: return null
 
         // If this is beneath existing members, don't add the docs string.
@@ -158,9 +161,9 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         val genericParams = proto.genericParameterGroup?.genericParameterList ?: emptyList()
         val attributes = classImpl.classMemberList.map { it.classAttribute }
 
-        // Build the docstring from the nodes gathered above.
+        // Build the docstring from the nodes gathered above. The description line was already typed by the
+        // user (the bare "#" that triggered this), so only the tag lines need to be filled in.
         val text = buildString {
-            append(descriptionLine())
             for (gp in genericParams) append(genericParamLine(gp))
             for (attr in attributes) append(clsFieldLine(attr.identifier.text))
         }
@@ -207,18 +210,30 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
         editor.caretModel.moveToOffset(curLineStart + commentIndent.length + "# ".length)
     }
 
-    // Check if the block already opens with a docstring comment.
-    private fun hasDocstring(impl: PsiElement): Boolean =
-        impl.text.substringAfter('{').trimStart().startsWith('#')
+    // True when the block's docstring is exactly one bare "#" comment - i.e. the user just typed "#" as the
+    // very first line of the body and pressed Enter, asking for the rest of the docstring framework.
+    private fun hasBareHashStarter(impl: PsiElement, editor: Editor, offset: Int): Boolean {
+        val curLineNum = editor.document.getLineNumber(offset)
+        if (curLineNum == 0) return false
+        val prevLineText = editor.document.getText(TextRange(
+            editor.document.getLineStartOffset(curLineNum - 1),
+            editor.document.getLineEndOffset(curLineNum - 1)
+        ))
+        if (prevLineText.trim() != "#") return false
 
-    private fun insert(editor: Editor, offset: Int, text: String): TextRange {
-        val trimmed = text.trimEnd('\n')
-        editor.document.insertString(offset, trimmed)
-        return TextRange(offset, offset + trimmed.length)
+        // That "#" must be the very first thing in the body - nothing but whitespace between "{" and it.
+        var child = impl.firstChild?.nextSibling // step past "{"
+        while (child is PsiWhiteSpace) child = child.nextSibling
+        return child is PsiComment && child.text.trim() == "#"
     }
 
-    private fun descriptionLine(): String {
-        return "# \n"
+    private fun insert(editor: Editor, offset: Int, text: String): TextRange {
+        // Keep exactly one trailing newline after the tag lines (even if there are none), so a single blank
+        // line separates the docstring block from whatever follows it (the closing brace, or the first member).
+        val body = text.trimEnd('\n')
+        val toInsert = if (body.isEmpty()) "\n" else "$body\n"
+        editor.document.insertString(offset, toInsert)
+        return TextRange(offset, offset + toInsert.length)
     }
 
     private fun genericParamLine(gp: SppGenericParameter): String {

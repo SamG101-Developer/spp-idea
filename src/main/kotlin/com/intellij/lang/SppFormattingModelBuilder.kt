@@ -214,6 +214,12 @@ class SppBlock(
             if (t1 == SppTypes.TOKEN_LEFT_CURLY_BRACE && t2 == SppTypes.TOKEN_RIGHT_CURLY_BRACE) return Spacing.createSpacing(
                 1, 1, 0, false, 0
             )
+
+            // "{" followed by content, or content followed by "}", on the same line: exactly 1 space.
+            // A line break here (e.g. the normal multi-line block layout) is preserved as-is.
+            if (t1 == SppTypes.TOKEN_LEFT_CURLY_BRACE || t2 == SppTypes.TOKEN_RIGHT_CURLY_BRACE) return Spacing.createSpacing(
+                1, 1, 0, true, 1
+            )
         }
 
         // Binary operators: 1 space on either side

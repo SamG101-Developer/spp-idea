@@ -22,6 +22,8 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
             TextAttributesKey.createTextAttributesKey("SPP_NUMBER", DefaultLanguageHighlighterColors.NUMBER)
         val STRING: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_STRING", DefaultLanguageHighlighterColors.STRING)
+        val VALID_ESCAPE: TextAttributesKey =
+            TextAttributesKey.createTextAttributesKey("SPP_VALID_STRING_ESCAPE", DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE)
         val COMMENT: TextAttributesKey =
             TextAttributesKey.createTextAttributesKey("SPP_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
         val DOCSTRING: TextAttributesKey =

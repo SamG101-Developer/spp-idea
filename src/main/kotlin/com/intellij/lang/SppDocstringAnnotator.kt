@@ -11,34 +11,33 @@ import com.intellij.psi.PsiWhiteSpace
 import kotlin.collections.orEmpty
 
 /**
- * The `SppDocstringAnnotator` provides the default docstring templates, and warning for missing or invalid docstrings.
- * It hooks into the "tag" usage system, using things like `\@let` etc. There are
+ * The `SppDocstringAnnotator` validates docstrings that are present, warning about invalid or mismatched tags.
+ * Docstrings are optional - an absent one is not itself a warning. It hooks into the "tag" usage system, using
+ * things like `\@let` etc.
  */
 class SppDocstringAnnotator : Annotator {
 
     private data class DocTag(val tag: String, val name: String?, val nameRange: TextRange?)
 
     /**
-     * Analyse the given docstring on the element and create any warnings based on missing docstrings or invalid tags
-     * provided in the docstring.
+     * Analyse the given docstring on the element, if one is present, and create any warnings based on invalid or
+     * mismatched tags in it.
      */
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         when (element) {
             // Validate the subroutine prototypes' docstrings as a "function docstring"
             is SppSubroutinePrototype -> validateFunctionProto(
-                element.functionImplementation,
-                element.functionParameterGroup,
+                element.functionImplementation ?: return,
+                element.functionParameterGroup ?: return,
                 element.genericParameterGroup,
-                element.identifier,
                 holder
             )
 
             // Validate the coroutines' prototypes' docstrings as a "function docstring"
             is SppCoroutinePrototype -> validateFunctionProto(
-                element.functionImplementation,
-                element.functionParameterGroup,
+                element.functionImplementation ?: return,
+                element.functionParameterGroup ?: return,
                 element.genericParameterGroup,
-                element.identifier,
                 holder
             )
 
@@ -46,14 +45,10 @@ class SppDocstringAnnotator : Annotator {
             is SppClassPrototype -> validateClassProto(element, holder)
 
             // Validate the sup prototypes' docstrings as a "sup docstring"
-            is SppSupPrototypeFunctions -> validateSupProto(
-                element.supImplementation, element.typeExpression, holder
-            )
+            is SppSupPrototypeFunctions -> validateSupProto(element.supImplementation, holder)
 
             // Validate the sup-ext prototypes' docstrings as a "sup docstring" (with the name, not superclass)
-            is SppSupPrototypeExtension -> validateSupProto(
-                element.supImplementation, element.typeExpressionList.first(), holder
-            )
+            is SppSupPrototypeExtension -> validateSupProto(element.supImplementation, holder)
         }
     }
 
@@ -71,16 +66,12 @@ class SppDocstringAnnotator : Annotator {
         impl: SppFunctionImplementation,
         paramGroup: SppFunctionParameterGroup,
         genericGroup: SppGenericParameterGroup?,
-        nameElem: PsiElement,
         holder: AnnotationHolder,
     ) {
-        // Collect the docstring for the function, and create a warning if it is empty - all functions should be
-        // documented. Todo: Create a "builtin" annotation that can avoid this ie "!nodoc(reason: StrView)" or similar.
+        // Collect the docstring for the function. Docstrings are optional, so an absent one is not itself
+        // warned about - only the content of a docstring that *is* present gets validated below.
         val docComments = collectDocstringComments(impl)
-        if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(nameElem).create()
-            return
-        }
+        if (docComments.isEmpty()) return
 
         // Perform a validation on any numeric lists in the docstring.
         validateNumberedLists(docComments, holder)
@@ -137,14 +128,11 @@ class SppDocstringAnnotator : Annotator {
     }
 
     private fun validateClassProto(proto: SppClassPrototype, holder: AnnotationHolder) {
-        val impl = proto.classImplementation
+        val impl = proto.classImplementation ?: return
         val genericGroup = proto.genericParameterGroup
 
         val docComments = collectDocstringComments(impl)
-        if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(proto.upperIdentifier).create()
-            return
-        }
+        if (docComments.isEmpty()) return
         validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
@@ -196,14 +184,10 @@ class SppDocstringAnnotator : Annotator {
 
     private fun validateSupProto(
         impl: SppSupImplementation,
-        nameElem: PsiElement,
         holder: AnnotationHolder,
     ) {
         val docComments = collectDocstringComments(impl)
-        if (docComments.isEmpty()) {
-            holder.newAnnotation(HighlightSeverity.WARNING, "Missing docstring").range(nameElem).create()
-            return
-        }
+        if (docComments.isEmpty()) return
         validateNumberedLists(docComments, holder)
 
         val tags = parseTags(docComments)
