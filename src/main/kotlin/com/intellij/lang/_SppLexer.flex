@@ -121,6 +121,7 @@ LEXEME_DOUBLE_QUOTE_STR=b?\"[^\"\r\n]*\"
   "false"                         { return KEYWORD_FALSE; }
   "res"                           { return KEYWORD_RES; }
   "caps"                          { return KEYWORD_CAPS; }
+  "defer"                         { return KEYWORD_DEFER; }
 
   {LINE_COMMENT}                  { return LINE_COMMENT; }
   {LEXEME_IDENTIFIER}             { return LEXEME_IDENTIFIER; }

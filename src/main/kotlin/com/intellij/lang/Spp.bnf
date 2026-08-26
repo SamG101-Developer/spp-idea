@@ -106,6 +106,7 @@
         keyword_false = "false"
         keyword_res = "res"
         keyword_caps = "caps"
+        keyword_defer = "defer"
     ]
 }
 
@@ -266,7 +267,7 @@ case_expression_pattern_variant_destructure_array ::= token_left_square_bracket 
 case_expression_pattern_variant_destructure_object ::= type_expression_simple token_left_parenthesis (case_expression_pattern_nested_for_destructure_object (token_comma case_expression_pattern_nested_for_destructure_object)*)? token_right_parenthesis
 case_expression_pattern_variant_destructure_tuple ::= token_left_parenthesis (case_expression_pattern_nested_for_destructure_tuple (token_comma case_expression_pattern_nested_for_destructure_tuple)*)? token_right_parenthesis
 case_expression_pattern_variant_destructure_skip_single_argument ::= token_underscore
-case_expression_pattern_variant_destructure_skip_multiple_arguments ::= token_double_dot
+case_expression_pattern_variant_destructure_skip_multiple_arguments ::= token_double_dot case_expression_pattern_variant_single_identifier?
 case_expression_pattern_variant_destructure_attribute_binding ::= identifier token_assign case_expression_pattern_nested_for_attribute_binding
 case_expression_pattern_variant_single_identifier ::= case_expression_pattern_variant_single_identifier_without_convention | case_expression_pattern_variant_single_identifier_with_convention
 case_expression_pattern_variant_single_identifier_without_convention ::= keyword_mut? identifier local_variable_single_identifier_alias?
@@ -335,7 +336,7 @@ object_initializer_argument ::= object_initializer_argument_keyword | object_ini
 object_initializer_argument_keyword ::= identifier token_assign expression
 object_initializer_argument_shorthand ::= identifier
 
-statement ::= let_statement | assignment_statement | use_statement | use_var_statement | cmp_statement | type_statement | ret_statement | exit_statement | skip_statement | expression
+statement ::= let_statement | defer_statement | assignment_statement | use_statement | use_var_statement | cmp_statement | type_statement | ret_statement | exit_statement | skip_statement | expression
 let_statement ::= let_statement_initialized | let_statement_uninitialized
 let_statement_initialized ::= keyword_let local_variable let_statement_initialized_explicit_type? token_assign expression
 let_statement_initialized_explicit_type ::= token_colon type_expression
@@ -353,6 +354,7 @@ assignment_target_postfix_expression_op ::=
     postfix_expression_op_index
 assignment_target_primary_expression ::= identifier | self_identifier
 
+defer_statement ::= keyword_defer expression
 use_statement ::= keyword_use type_expression_simple
 use_var_statement ::= keyword_use parse_postfix_expression_strictly_static_access_one
 cmp_statement ::= keyword_cmp identifier token_colon type_expression token_assign expression
@@ -369,7 +371,7 @@ local_variable_destructure_array ::= token_left_square_bracket (local_variable_n
 local_variable_destructure_object ::= type_expression_simple token_left_parenthesis (local_variable_nested_for_destructure_object (token_comma local_variable_nested_for_destructure_object)*)? token_right_parenthesis
 local_variable_destructure_tuple ::= token_left_parenthesis (local_variable_nested_for_destructure_tuple (token_comma local_variable_nested_for_destructure_tuple)*)? token_right_parenthesis
 local_variable_destructure_skip_single_argument ::= token_underscore
-local_variable_destructure_skip_multiple_arguments ::= token_double_dot
+local_variable_destructure_skip_multiple_arguments ::= token_double_dot local_variable_single_identifier?
 local_variable_destructure_attribute_binding ::= identifier token_assign local_variable_nested_for_attribute_binding {pin=2}
 local_variable_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias? {pin=2}
 local_variable_single_identifier_alias ::= keyword_as identifier
