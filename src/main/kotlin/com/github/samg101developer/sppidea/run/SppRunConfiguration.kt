@@ -6,6 +6,7 @@ import com.intellij.execution.Executor
 import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.configurations.PtyCommandLine
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.execution.configurations.RunProfileState
@@ -70,7 +71,9 @@ class SppRunConfiguration(
 
         return object : CommandLineState(environment) {
             override fun startProcess(): ProcessHandler {
-                val commandLine = GeneralCommandLine(sppPath)
+                val commandLine = PtyCommandLine(GeneralCommandLine(sppPath))
+                    .withConsoleMode(false)
+                    .withInitialColumns(200)
                     .withParameters(command.cliArg)
                     .withWorkDirectory(workingDir)
                 programArguments?.takeIf { it.isNotBlank() }?.let {
