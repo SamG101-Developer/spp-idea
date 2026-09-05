@@ -32,4 +32,12 @@
         <breadcrumbsInfoProvider implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
         <lang.foldingBuilder language="S++" implementationClass="com.intellij.lang.SppFoldingBuilder"/>
     </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="S++" displayType="BALLOON"/>
+        <applicationConfigurable parentId="language" id="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"
+                                  displayName="S++" instance="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"/>
+        <moduleType id="SPP_MODULE_TYPE" implementationClass="com.github.samg101developer.sppidea.module.SppModuleType"/>
+        <configurationType implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+    </extensions>
 </idea-plugin>
