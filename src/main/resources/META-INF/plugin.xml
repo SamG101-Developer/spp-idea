@@ -40,4 +40,18 @@
         <moduleType id="SPP_MODULE_TYPE" implementationClass="com.github.samg101developer.sppidea.module.SppModuleType"/>
         <configurationType implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
     </extensions>
+
+    <actions>
+        <!-- Added next to the run widget in the new UI, and to the old toolbar and Run menu, so the
+             build "hammer" sits beside Run wherever the run controls happen to be. -->
+        <action id="Spp.Build"
+                class="com.github.samg101developer.sppidea.run.SppBuildAction"
+                text="Build"
+                description="Run 'spp build' for the selected S++ configuration"
+                icon="AllIcons.Actions.Compile">
+            <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
+            <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
+            <add-to-group group-id="RunMenu" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>

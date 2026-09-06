@@ -16,8 +16,14 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
     private val argumentsField = JBTextField()
 
     override fun resetEditorFrom(configuration: SppRunConfiguration) {
-        val module = configuration.moduleName?.let { ModuleManager.getInstance(project).findModuleByName(it) }
-        moduleComboBox.selectedModule = module
+        // A configuration that has not chosen a module yet falls back to the project's only
+        // module, so a single-module S++ project opens the form already filled in and consistent
+        // with the name the configuration was given.
+        val moduleManager = ModuleManager.getInstance(project)
+        moduleComboBox.selectedModule = configuration.moduleName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { moduleManager.findModuleByName(it) }
+            ?: moduleManager.modules.singleOrNull()
         argumentsField.text = configuration.programArguments ?: ""
     }
 
