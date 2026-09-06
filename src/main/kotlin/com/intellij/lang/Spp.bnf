@@ -323,7 +323,9 @@ gen_expression_with_value ::= keyword_gen convention? expression
 gen_expression_without_value ::= keyword_gen
 gen_unroll_expression ::= keyword_gen keyword_with expression
 
-closure_expression ::= keyword_cor? closure_expression_parameter_and_capture_group expression
+closure_expression ::= closure_expression_with_return_type | closure_expression_without_return_type
+closure_expression_with_return_type ::= keyword_cor? closure_expression_parameter_and_capture_group token_arrow_right type_expression inner_scope_expression
+closure_expression_without_return_type ::= keyword_cor? closure_expression_parameter_and_capture_group expression
 closure_expression_parameter_and_capture_group ::= token_left_parenthesis closure_expression_parameter_group closure_expression_capture_group? token_right_parenthesis
 closure_expression_capture_group ::= keyword_caps closure_expression_capture (token_comma closure_expression_capture)*
 closure_expression_capture ::= convention? (identifier | self_identifier)
