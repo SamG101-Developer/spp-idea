@@ -1,12 +1,15 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.GenerateLexerTask
+import org.jetbrains.intellij.platform.gradle.tasks.GenerateParserTask
 
 plugins {
     id("java") // Java support
     alias(libs.plugins.kotlin) // Kotlin support
     alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
+    alias(libs.plugins.intelliJPlatformGrammarKit) // IntelliJ Platform Grammar-Kit subplugin, generates the lexer and parser
     alias(libs.plugins.qodana) // Gradle Qodana Plugin
     alias(libs.plugins.kover) // Gradle Kover Plugin
 }
@@ -19,10 +22,15 @@ kotlin {
     jvmToolchain(21)
 }
 
-// Set the source sets used to build the project.
+// Set the source sets used to build the project. The lexer
+// and parser are generated from the grammar on every build
+// rather than committed, so that CI always compiles against
+// the grammar as it is; adding the tasks as source dirs is
+// also what makes compilation depend on them.
 sourceSets {
     main {
-        java.srcDirs("src/main/gen")
+        java.srcDir(tasks.named<GenerateLexerTask>("generateLexer").flatMap { it.targetRootOutputDir })
+        java.srcDir(tasks.named<GenerateParserTask>("generateParser").flatMap { it.targetRootOutputDir })
     }
 }
 
@@ -141,6 +149,18 @@ tasks {
 
     publishPlugin {
         dependsOn(patchChangelog)
+    }
+
+    generateLexer {
+        sourceFile = file("src/main/kotlin/com/intellij/lang/_SppLexer.flex")
+        purgeOldFiles = true
+    }
+
+    generateParser {
+        sourceFile = file("src/main/kotlin/com/intellij/lang/Spp.bnf")
+        pathToParser = "com/intellij/lang/SppParser.java"
+        pathToPsiRoot = "com/intellij/lang/psi"
+        purgeOldFiles = true
     }
 }
 
