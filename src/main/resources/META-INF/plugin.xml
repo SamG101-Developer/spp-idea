@@ -8,11 +8,6 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.samg101developer.sppidea.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.samg101developer.sppidea.startup.MyProjectActivity" />
-    </extensions>
-
-    <extensions defaultExtensionNs="com.intellij">
         <fileType name="S++ File" language="S++" implementationClass="com.intellij.lang.SppFileType" fieldName="INSTANCE" extensions="spp"/>
         <lang.parserDefinition language="S++" implementationClass="com.intellij.lang.SppParserDefinition"/>
         <lang.syntaxHighlighterFactory language="S++" implementationClass="com.intellij.lang.SppSyntaxHighlighterFactory"/>
@@ -20,6 +15,15 @@
         <lang.quoteHandler language="S++" implementationClass="com.intellij.lang.SppQuoteHandler"/>
         <lang.commenter language="S++" implementationClass="com.intellij.lang.SppCommenter"/>
         <annotator language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
+        <editor.linePainter implementation="com.github.samg101developer.sppidea.diagnostics.SppErrorLinePainter"/>
+        <externalAnnotator language="S++"
+                           implementationClass="com.github.samg101developer.sppidea.diagnostics.SppExternalAnnotator"/>
+        <completion.contributor language="S++"
+                                implementationClass="com.github.samg101developer.sppidea.diagnostics.SppCompletionContributor"/>
+        <codeInsight.lineMarkerProvider language="S++"
+                                       implementationClass="com.github.samg101developer.sppidea.diagnostics.SppIndexLineMarkerProvider"/>
+        <gotoDeclarationHandler
+            implementation="com.github.samg101developer.sppidea.diagnostics.SppGotoDeclarationHandler"/>
         <annotator language="S++" implementationClass="com.intellij.lang.SppDocstringAnnotator"/>
         <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
         <enterHandlerDelegate implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
@@ -35,11 +39,18 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="S++" displayType="BALLOON"/>
+        <statusBarWidgetFactory id="SppAnalysisStatus"
+                                implementation="com.github.samg101developer.sppidea.diagnostics.SppStatusBarWidgetFactory"/>
         <applicationConfigurable parentId="language" id="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"
                                   displayName="S++" instance="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"/>
         <moduleType id="SPP_MODULE_TYPE" implementationClass="com.github.samg101developer.sppidea.module.SppModuleType"/>
         <configurationType implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="com.github.samg101developer.sppidea.diagnostics.SppOpenFileWarmup"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
 
     <actions>
         <!-- Added next to the run widget in the new UI, and to the old toolbar and Run menu, so the

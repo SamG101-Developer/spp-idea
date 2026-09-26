@@ -9,69 +9,82 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase
 import com.intellij.psi.tree.IElementType
 
-
+// The S++ syntax highlighter class, which defines the
+// syntax highlighting rules for S++ files. This class is
+// responsible for mapping S++ tokens to text attributes,
+// which are used to colour the text in the editor.
+// Todo: To be replaced by the actual s++ compiler.
 class SppSyntaxHighlighter : SyntaxHighlighterBase {
-    companion object {
-        val IDENTIFIER: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_IDENTIFIER", DefaultLanguageHighlighterColors.IDENTIFIER)
-        val TYPE_IDENTIFIER: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_TYPE", DefaultLanguageHighlighterColors.CLASS_NAME)
-        val KEYWORD: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_KEYWORD", DefaultLanguageHighlighterColors.KEYWORD)
-        val NUMBER: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_NUMBER", DefaultLanguageHighlighterColors.NUMBER)
-        val STRING: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_STRING", DefaultLanguageHighlighterColors.STRING)
-        val VALID_ESCAPE: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_VALID_STRING_ESCAPE", DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE)
-        val COMMENT: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
-        val DOCSTRING: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING", DefaultLanguageHighlighterColors.DOC_COMMENT)
-        val DOCSTRING_TAG: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_TAG", DefaultLanguageHighlighterColors.DOC_COMMENT_TAG)
-        val DOCSTRING_TAG_VALUE: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_TAG_VALUE", DefaultLanguageHighlighterColors.DOC_COMMENT_TAG_VALUE)
-        val DOCSTRING_INLINE_CODE: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_INLINE_CODE", DefaultLanguageHighlighterColors.DOC_COMMENT_MARKUP)
-        val OPERATOR: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
-        val BRACKET: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_BRACKET", DefaultLanguageHighlighterColors.BRACKETS)
-        val ATTRIBUTE: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_ATTRIBUTE", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
-        val FUNCTION_CALL: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_FUNCTION_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
-        val ANNOTATION: TextAttributesKey =
-            TextAttributesKey.createTextAttributesKey("SPP_ANNOTATION", DefaultLanguageHighlighterColors.METADATA)
+  companion object {
+    val IDENTIFIER: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_IDENTIFIER", DefaultLanguageHighlighterColors.IDENTIFIER)
+    val TYPE_IDENTIFIER: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_TYPE", DefaultLanguageHighlighterColors.CLASS_NAME)
+    val KEYWORD: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_KEYWORD", DefaultLanguageHighlighterColors.KEYWORD)
+    val NUMBER: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_NUMBER", DefaultLanguageHighlighterColors.NUMBER)
+    val STRING: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_STRING", DefaultLanguageHighlighterColors.STRING)
+    val VALID_ESCAPE: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey(
+        "SPP_VALID_STRING_ESCAPE",
+        DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE
+      )
+    val COMMENT: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
+    val DOCSTRING: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING", DefaultLanguageHighlighterColors.DOC_COMMENT)
+    val DOCSTRING_TAG: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_DOCSTRING_TAG", DefaultLanguageHighlighterColors.DOC_COMMENT_TAG)
+    val DOCSTRING_TAG_VALUE: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey(
+        "SPP_DOCSTRING_TAG_VALUE",
+        DefaultLanguageHighlighterColors.DOC_COMMENT_TAG_VALUE
+      )
+    val DOCSTRING_INLINE_CODE: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey(
+        "SPP_DOCSTRING_INLINE_CODE",
+        DefaultLanguageHighlighterColors.DOC_COMMENT_MARKUP
+      )
+    val OPERATOR: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
+    val BRACKET: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_BRACKET", DefaultLanguageHighlighterColors.BRACKETS)
+    val ATTRIBUTE: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_ATTRIBUTE", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
+    val FUNCTION_CALL: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_FUNCTION_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
+    val ANNOTATION: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_ANNOTATION", DefaultLanguageHighlighterColors.METADATA)
 
-        val BAD_CHAR_KEYS: Array<TextAttributesKey> = arrayOf(BAD_CHARACTER)
-        val EMPTY_KEYS: Array<TextAttributesKey> = arrayOf()
-        val IDENTIFIER_KEYS: Array<TextAttributesKey> = arrayOf(IDENTIFIER)
-        val TYPE_IDENTIFIER_KEYS: Array<TextAttributesKey> = arrayOf(TYPE_IDENTIFIER)
-        val KEYWORD_KEYS: Array<TextAttributesKey> = arrayOf(KEYWORD)
-        val NUMBER_KEYS: Array<TextAttributesKey> = arrayOf(NUMBER)
-        val COMMENT_KEYS: Array<TextAttributesKey> = arrayOf(COMMENT)
-        val OPERATOR_KEYS: Array<TextAttributesKey> = arrayOf(OPERATOR)
-        val BRACKET_KEYS: Array<TextAttributesKey> = arrayOf(BRACKET)
+    val BAD_CHAR_KEYS: Array<TextAttributesKey> = arrayOf(BAD_CHARACTER)
+    val EMPTY_KEYS: Array<TextAttributesKey> = arrayOf()
+    val IDENTIFIER_KEYS: Array<TextAttributesKey> = arrayOf(IDENTIFIER)
+    val TYPE_IDENTIFIER_KEYS: Array<TextAttributesKey> = arrayOf(TYPE_IDENTIFIER)
+    val KEYWORD_KEYS: Array<TextAttributesKey> = arrayOf(KEYWORD)
+    val NUMBER_KEYS: Array<TextAttributesKey> = arrayOf(NUMBER)
+    val COMMENT_KEYS: Array<TextAttributesKey> = arrayOf(COMMENT)
+    val OPERATOR_KEYS: Array<TextAttributesKey> = arrayOf(OPERATOR)
+    val BRACKET_KEYS: Array<TextAttributesKey> = arrayOf(BRACKET)
+  }
+
+  constructor() : super()
+
+  override fun getHighlightingLexer(): Lexer {
+    return SppLexerAdaptor()
+  }
+
+  override fun getTokenHighlights(tokenType: IElementType?): Array<out TextAttributesKey?> {
+    return when (tokenType) {
+      in SppTokenSets.KEYWORDS -> KEYWORD_KEYS
+      in SppTokenSets.NUMBERS -> NUMBER_KEYS
+      in SppTokenSets.COMMENTS -> COMMENT_KEYS
+      in SppTokenSets.OPERATORS -> OPERATOR_KEYS
+      in SppTokenSets.BRACKETS -> BRACKET_KEYS
+      SppTypes.LEXEME_IDENTIFIER -> IDENTIFIER_KEYS
+      SppTypes.LEXEME_UPPER_IDENTIFIER -> TYPE_IDENTIFIER_KEYS
+      else -> EMPTY_KEYS
     }
-
-    constructor() : super()
-
-    override fun getHighlightingLexer(): Lexer {
-        return SppLexerAdaptor()
-    }
-
-    override fun getTokenHighlights(tokenType: IElementType?): Array<out TextAttributesKey?> {
-        return when (tokenType) {
-            in SppTokenSets.KEYWORDS -> KEYWORD_KEYS
-            in SppTokenSets.NUMBERS -> NUMBER_KEYS
-            in SppTokenSets.COMMENTS -> COMMENT_KEYS
-            in SppTokenSets.OPERATORS -> OPERATOR_KEYS
-            in SppTokenSets.BRACKETS -> BRACKET_KEYS
-            SppTypes.LEXEME_IDENTIFIER -> IDENTIFIER_KEYS
-            SppTypes.LEXEME_UPPER_IDENTIFIER -> TYPE_IDENTIFIER_KEYS
-            else -> EMPTY_KEYS
-        }
-    }
+  }
 }

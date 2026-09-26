@@ -1,113 +1,113 @@
 {
-    parserClass="com.intellij.lang.SppParser"
-    extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+  parserClass="com.intellij.lang.SppParser"
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
 
-    psiClassPrefix="Spp"
-    psiImplClassSuffix="Impl"
-    psiPackage="com.intellij.lang.psi"
-    psiImplPackage="com.intellij.lang.psi.impl"
+  psiClassPrefix="Spp"
+  psiImplClassSuffix="Impl"
+  psiPackage="com.intellij.lang.psi"
+  psiImplPackage="com.intellij.lang.psi.impl"
 
-    elementTypeHolderClass="com.intellij.lang.psi.SppTypes"
-    elementTypeClass="com.intellij.lang.psi.SppElementType"
-    tokenTypeClass="com.intellij.lang.psi.SppTokenType"
+  elementTypeHolderClass="com.intellij.lang.psi.SppTypes"
+  elementTypeClass="com.intellij.lang.psi.SppElementType"
+  tokenTypeClass="com.intellij.lang.psi.SppTokenType"
 
-    tokens = [
-        line_comment = "regexp:#.*"
+  tokens = [
+    line_comment = "regexp:#.*"
 
-        lexeme_identifier = "regexp:[a-z][_a-zA-Z0-9]*"
-        lexeme_upper_identifier = "regexp:[A-Z][_a-zA-Z0-9]*"
-        lexeme_bin_digits = "regexp:0b[01]+"
-        lexeme_oct_digits = "regexp:0o[0-7]+"
-        lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
-        lexeme_dec_digits = "regexp:[0-9]+"
-        lexeme_single_quote_str = "regexp:b?'[^'\r\n]+'"
-        lexeme_double_quote_str = "regexp:b?\"[^\"\r\n]*\""
+    lexeme_identifier = "regexp:[a-z][_a-zA-Z0-9]*"
+    lexeme_upper_identifier = "regexp:[A-Z][_a-zA-Z0-9]*"
+    lexeme_bin_digits = "regexp:0b[01]+"
+    lexeme_oct_digits = "regexp:0o[0-7]+"
+    lexeme_hex_digits = "regexp:0x[0-9a-fA-F]+"
+    lexeme_dec_digits = "regexp:[0-9]+"
+    lexeme_single_quote_str = "regexp:b?'[^'\r\n]+'"
+    lexeme_double_quote_str = "regexp:b?\"[^\"\r\n]*\""
 
-        token_left_curly_brace = "{"
-        token_right_curly_brace = "}"
-        token_left_square_bracket = "["
-        token_right_square_bracket = "]"
-        token_left_parenthesis = "("
-        token_right_parenthesis = ")"
-        token_colon = ":"
-        token_comma = ","
-        token_assign = "="
-        token_at = "@"
-        token_underscore = "_"
-        token_less_than = "<"
-        token_greater_than = ">"
-        token_add = "+"
-        token_sub = "-"
-        token_mul = "*"
-        token_div = "/"
-        token_rem = "%"
-        token_bit_ior = "|"
-        token_bit_xor = "^"
-        token_bit_and = "&"
-        token_dot = "."
-        token_question_mark = "?"
-        token_exclamation_mark = "!"
-        token_semicolon = ";"
-        token_single_quote = "'"
-        token_double_quote = '"'
-        token_dollar = "$"
-        token_arrow_right = "->"
-        token_double_dot = ".."
-        token_double_colon = "::"
-        token_double_exclamation_mark = "!!"
-        token_equals = "=="
-        token_not_equals = "!="
-        token_less_than_equals = "<="
-        token_greater_than_equals = ">="
-        token_add_assign = "+="
-        token_sub_assign = "-="
-        token_mul_assign = "*="
-        token_div_assign = "/="
-        token_rem_assign = "%="
-        token_pow = "**"
-        token_bit_shl = "<<"
-        token_bit_shr = ">>"
-        token_bit_ior_assign = "|="
-        token_bit_xor_assign = "^="
-        token_bit_and_assign = "&="
-        token_pow_assign = "**="
-        token_bit_shl_assign = "<<="
-        token_bit_shr_assign = ">>="
-        
-        keyword_cls = "cls"
-        keyword_fun = "fun"
-        keyword_cor = "cor"
-        keyword_sup = "sup"
-        keyword_ext = "ext"
-        keyword_mut = "mut"
-        keyword_use = "use"
-        keyword_cmp = "cmp"
-        keyword_let = "let"
-        keyword_type = "type"
-        keyword_self = "self"
-        keyword_case = "case"
-        keyword_of = "of"
-        keyword_loop = "loop"
-        keyword_in = "in"
-        keyword_to = "to"
-        keyword_else = "else"
-        keyword_gen = "gen"
-        keyword_with = "with"
-        keyword_ret = "ret"
-        keyword_exit = "exit"
-        keyword_skip = "skip"
-        keyword_is = "is"
-        keyword_as = "as"
-        keyword_or = "or"
-        keyword_and = "and"
-        keyword_not = "not"
-        keyword_async = "async"
-        keyword_true = "true"
-        keyword_false = "false"
-        keyword_res = "res"
-        keyword_caps = "caps"
-        keyword_defer = "defer"
-    ]
+    token_left_curly_brace = "{"
+    token_right_curly_brace = "}"
+    token_left_square_bracket = "["
+    token_right_square_bracket = "]"
+    token_left_parenthesis = "("
+    token_right_parenthesis = ")"
+    token_colon = ":"
+    token_comma = ","
+    token_assign = "="
+    token_at = "@"
+    token_underscore = "_"
+    token_less_than = "<"
+    token_greater_than = ">"
+    token_add = "+"
+    token_sub = "-"
+    token_mul = "*"
+    token_div = "/"
+    token_rem = "%"
+    token_bit_ior = "|"
+    token_bit_xor = "^"
+    token_bit_and = "&"
+    token_dot = "."
+    token_question_mark = "?"
+    token_exclamation_mark = "!"
+    token_semicolon = ";"
+    token_single_quote = "'"
+    token_double_quote = '"'
+    token_dollar = "$"
+    token_arrow_right = "->"
+    token_double_dot = ".."
+    token_double_colon = "::"
+    token_double_exclamation_mark = "!!"
+    token_equals = "=="
+    token_not_equals = "!="
+    token_less_than_equals = "<="
+    token_greater_than_equals = ">="
+    token_add_assign = "+="
+    token_sub_assign = "-="
+    token_mul_assign = "*="
+    token_div_assign = "/="
+    token_rem_assign = "%="
+    token_pow = "**"
+    token_bit_shl = "<<"
+    token_bit_shr = ">>"
+    token_bit_ior_assign = "|="
+    token_bit_xor_assign = "^="
+    token_bit_and_assign = "&="
+    token_pow_assign = "**="
+    token_bit_shl_assign = "<<="
+    token_bit_shr_assign = ">>="
+
+    keyword_cls = "cls"
+    keyword_fun = "fun"
+    keyword_cor = "cor"
+    keyword_sup = "sup"
+    keyword_ext = "ext"
+    keyword_mut = "mut"
+    keyword_use = "use"
+    keyword_cmp = "cmp"
+    keyword_let = "let"
+    keyword_type = "type"
+    keyword_self = "self"
+    keyword_case = "case"
+    keyword_of = "of"
+    keyword_loop = "loop"
+    keyword_in = "in"
+    keyword_to = "to"
+    keyword_else = "else"
+    keyword_gen = "gen"
+    keyword_with = "with"
+    keyword_ret = "ret"
+    keyword_exit = "exit"
+    keyword_skip = "skip"
+    keyword_is = "is"
+    keyword_as = "as"
+    keyword_or = "or"
+    keyword_and = "and"
+    keyword_not = "not"
+    keyword_async = "async"
+    keyword_true = "true"
+    keyword_false = "false"
+    keyword_res = "res"
+    keyword_caps = "caps"
+    keyword_defer = "defer"
+  ]
 }
 
 
@@ -116,14 +116,14 @@ root ::= module_prototype <<eof>>
 module_prototype ::= module_implementation
 module_implementation ::= (module_member)*
 module_member ::=
-    function_prototype |
-    class_prototype |
-    sup_prototype_extension |
-    sup_prototype_functions |
-    global_use_statement |
-    global_use_var_statement |
-    global_type_statement |
-    global_cmp_statement
+  function_prototype |
+  class_prototype |
+  sup_prototype_extension |
+  sup_prototype_functions |
+  global_use_statement |
+  global_use_var_statement |
+  global_type_statement |
+  global_cmp_statement
 
 class_prototype ::= (annotation)* keyword_cls upper_identifier generic_parameter_group? class_implementation {pin=3}
 class_implementation ::= token_left_curly_brace (class_member)* token_right_curly_brace
@@ -213,15 +213,15 @@ unary_expression_op_async ::= keyword_async
 
 postfix_expression ::= primary_expression postfix_expression_op*
 postfix_expression_op ::=
-    postfix_expression_op_deref |
-    postfix_expression_op_early_return |
-    postfix_expression_op_function_call |
-    postfix_expression_op_runtime_member_access |
-    postfix_expression_op_static_member_access |
-    postfix_expression_op_keyword_not |
-    postfix_expression_op_keyword_res |
-    postfix_expression_op_slice |
-    postfix_expression_op_index
+  postfix_expression_op_deref |
+  postfix_expression_op_early_return |
+  postfix_expression_op_function_call |
+  postfix_expression_op_runtime_member_access |
+  postfix_expression_op_static_member_access |
+  postfix_expression_op_keyword_not |
+  postfix_expression_op_keyword_res |
+  postfix_expression_op_slice |
+  postfix_expression_op_index
 postfix_expression_op_deref ::= token_at
 postfix_expression_op_early_return ::= token_question_mark
 postfix_expression_op_function_call ::= generic_argument_group? function_call_argument_group fold_expression?
@@ -235,19 +235,19 @@ parse_postfix_expression_strictly_static_access_zero ::= identifier (postfix_exp
 parse_postfix_expression_strictly_static_access_one ::= identifier (postfix_expression_op_static_member_access)+
 
 primary_expression ::=
-    closure_expression |
-    parenthesised_expression |
-    literal |
-    object_initializer |
-    case_of_expression |
-    case_expression |
-    loop_expression |
-    gen_expression |
-    type_expression |
-    identifier |
-    self_identifier |
-    inner_scope_expression |
-    fold_expression
+  closure_expression |
+  parenthesised_expression |
+  literal |
+  object_initializer |
+  case_of_expression |
+  case_expression |
+  loop_expression |
+  gen_expression |
+  type_expression |
+  identifier |
+  self_identifier |
+  inner_scope_expression |
+  fold_expression
 parenthesised_expression ::= token_left_parenthesis expression token_right_parenthesis
 fold_expression ::= token_double_dot
 
@@ -260,9 +260,9 @@ case_of_expression_branch ::= case_of_expression_branch_destructuring | case_of_
 case_of_expression_branch_destructuring ::= keyword_is case_expression_pattern_variant_destructure (token_comma case_expression_pattern_variant_destructure)* pattern_guard? inner_scope_expression
 case_of_expression_branch_comparing ::= boolean_comparison_op case_expression_pattern_variant_expression (token_comma case_expression_pattern_variant_expression)* pattern_guard? inner_scope_expression
 case_expression_pattern_variant_destructure ::=
-    case_expression_pattern_variant_destructure_array |
-    case_expression_pattern_variant_destructure_object |
-    case_expression_pattern_variant_destructure_tuple
+  case_expression_pattern_variant_destructure_array |
+  case_expression_pattern_variant_destructure_object |
+  case_expression_pattern_variant_destructure_tuple
 case_expression_pattern_variant_destructure_array ::= token_left_square_bracket (case_expression_pattern_nested_for_destructure_array (token_comma case_expression_pattern_nested_for_destructure_array)*)? token_right_square_bracket
 case_expression_pattern_variant_destructure_object ::= type_expression_simple token_left_parenthesis (case_expression_pattern_nested_for_destructure_object (token_comma case_expression_pattern_nested_for_destructure_object)*)? token_right_parenthesis
 case_expression_pattern_variant_destructure_tuple ::= token_left_parenthesis (case_expression_pattern_nested_for_destructure_tuple (token_comma case_expression_pattern_nested_for_destructure_tuple)*)? token_right_parenthesis
@@ -277,30 +277,30 @@ case_expression_pattern_variant_expression ::= expression
 case_expression_pattern_variant_else ::= keyword_else
 case_expression_pattern_variant_else_case ::= keyword_else case_expression
 case_expression_pattern_nested_for_destructure_array ::=
-    case_expression_pattern_variant_destructure_skip_single_argument |
-    case_expression_pattern_variant_destructure_skip_multiple_arguments |
-    case_expression_pattern_variant_destructure_array |
-    case_expression_pattern_variant_destructure_object |
-    case_expression_pattern_variant_destructure_tuple |
-    case_expression_pattern_variant_single_identifier |
-    case_expression_pattern_variant_literal
+  case_expression_pattern_variant_destructure_skip_single_argument |
+  case_expression_pattern_variant_destructure_skip_multiple_arguments |
+  case_expression_pattern_variant_destructure_array |
+  case_expression_pattern_variant_destructure_object |
+  case_expression_pattern_variant_destructure_tuple |
+  case_expression_pattern_variant_single_identifier |
+  case_expression_pattern_variant_literal
 case_expression_pattern_nested_for_destructure_tuple ::=
-    case_expression_pattern_variant_destructure_skip_single_argument |
-    case_expression_pattern_variant_destructure_skip_multiple_arguments |
-    case_expression_pattern_variant_destructure_array |
-    case_expression_pattern_variant_destructure_object |
-    case_expression_pattern_variant_destructure_tuple |
-    case_expression_pattern_variant_single_identifier |
-    case_expression_pattern_variant_literal
+  case_expression_pattern_variant_destructure_skip_single_argument |
+  case_expression_pattern_variant_destructure_skip_multiple_arguments |
+  case_expression_pattern_variant_destructure_array |
+  case_expression_pattern_variant_destructure_object |
+  case_expression_pattern_variant_destructure_tuple |
+  case_expression_pattern_variant_single_identifier |
+  case_expression_pattern_variant_literal
 case_expression_pattern_nested_for_destructure_object ::=
-    case_expression_pattern_variant_destructure_skip_multiple_arguments |
-    case_expression_pattern_variant_destructure_attribute_binding |
-    case_expression_pattern_variant_single_identifier
+  case_expression_pattern_variant_destructure_skip_multiple_arguments |
+  case_expression_pattern_variant_destructure_attribute_binding |
+  case_expression_pattern_variant_single_identifier
 case_expression_pattern_nested_for_attribute_binding ::=
-    case_expression_pattern_variant_destructure_array |
-    case_expression_pattern_variant_destructure_object |
-    case_expression_pattern_variant_destructure_tuple |
-    case_expression_pattern_variant_literal
+  case_expression_pattern_variant_destructure_array |
+  case_expression_pattern_variant_destructure_object |
+  case_expression_pattern_variant_destructure_tuple |
+  case_expression_pattern_variant_literal
 pattern_guard ::= keyword_and expression
 boolean_comparison_op ::=
     token_equals |
@@ -316,9 +316,9 @@ loop_conditional_expression ::= keyword_loop expression inner_scope_expression l
 loop_else_statement ::= keyword_else inner_scope_expression
 
 gen_expression ::=
-    gen_unroll_expression |
-    gen_expression_with_value |
-    gen_expression_without_value
+  gen_unroll_expression |
+  gen_expression_with_value |
+  gen_expression_without_value
 gen_expression_with_value ::= keyword_gen convention? expression
 gen_expression_without_value ::= keyword_gen
 gen_unroll_expression ::= keyword_gen keyword_with expression
@@ -348,12 +348,12 @@ assignment_statement ::= assignment_target (token_comma assignment_target)* toke
 assignment_target ::= assignment_target_postfix_expression
 assignment_target_postfix_expression ::= assignment_target_primary_expression assignment_target_postfix_expression_op*
 assignment_target_postfix_expression_op ::=
-    postfix_expression_op_deref |
-    postfix_expression_op_function_call |
-    postfix_expression_op_static_member_access |
-    postfix_expression_op_runtime_member_access |
-    postfix_expression_op_slice |
-    postfix_expression_op_index
+  postfix_expression_op_deref |
+  postfix_expression_op_function_call |
+  postfix_expression_op_static_member_access |
+  postfix_expression_op_runtime_member_access |
+  postfix_expression_op_slice |
+  postfix_expression_op_index
 assignment_target_primary_expression ::= identifier | self_identifier
 
 defer_statement ::= keyword_defer expression
@@ -378,27 +378,27 @@ local_variable_destructure_attribute_binding ::= identifier token_assign local_v
 local_variable_single_identifier ::= keyword_mut? identifier local_variable_single_identifier_alias? {pin=2}
 local_variable_single_identifier_alias ::= keyword_as identifier
 local_variable_nested_for_destructure_array ::=
-    local_variable_destructure_skip_single_argument |
-    local_variable_destructure_skip_multiple_arguments |
-    local_variable_destructure_array |
-    local_variable_destructure_object |
-    local_variable_destructure_tuple |
-    local_variable_single_identifier
+  local_variable_destructure_skip_single_argument |
+  local_variable_destructure_skip_multiple_arguments |
+  local_variable_destructure_array |
+  local_variable_destructure_object |
+  local_variable_destructure_tuple |
+  local_variable_single_identifier
 local_variable_nested_for_destructure_tuple ::=
-    local_variable_destructure_skip_single_argument |
-    local_variable_destructure_skip_multiple_arguments |
-    local_variable_destructure_array |
-    local_variable_destructure_object |
-    local_variable_destructure_tuple |
-    local_variable_single_identifier
+  local_variable_destructure_skip_single_argument |
+  local_variable_destructure_skip_multiple_arguments |
+  local_variable_destructure_array |
+  local_variable_destructure_object |
+  local_variable_destructure_tuple |
+  local_variable_single_identifier
 local_variable_nested_for_destructure_object ::=
-    local_variable_destructure_skip_multiple_arguments |
-    local_variable_destructure_attribute_binding |
-    local_variable_single_identifier
+  local_variable_destructure_skip_multiple_arguments |
+  local_variable_destructure_attribute_binding |
+  local_variable_single_identifier
 local_variable_nested_for_attribute_binding ::=
-    local_variable_destructure_array |
-    local_variable_destructure_object |
-    local_variable_destructure_tuple
+  local_variable_destructure_array |
+  local_variable_destructure_object |
+  local_variable_destructure_tuple
 
 convention ::= convention_mut | convention_ref
 convention_mut ::= token_bit_and keyword_mut
@@ -432,9 +432,9 @@ type_identifier ::= upper_identifier generic_argument_group?
 type_never ::= token_exclamation_mark
 type_parenthesised_expression ::= token_left_parenthesis type_expression token_right_parenthesis
 type_tuple_shorthand ::=
-    type_tuple_shorthand_n_elements |
-    type_tuple_shorthand_1_element |
-    type_tuple_shorthand_0_elements
+  type_tuple_shorthand_n_elements |
+  type_tuple_shorthand_1_element |
+  type_tuple_shorthand_0_elements
 type_tuple_shorthand_0_elements ::= token_left_parenthesis token_right_parenthesis
 type_tuple_shorthand_1_element ::= token_left_parenthesis type_expression token_comma token_right_parenthesis
 type_tuple_shorthand_n_elements ::= token_left_parenthesis (type_expression (token_comma type_expression)+) token_right_parenthesis
@@ -447,27 +447,27 @@ self_identifier ::= keyword_self
 upper_identifier ::= lexeme_upper_identifier
 
 literal ::=
-    literal_char |
-    literal_string |
-    literal_float |
-    literal_integer |
-    literal_boolean |
-    literal_tuple |
-    literal_array
+  literal_char |
+  literal_string |
+  literal_float |
+  literal_integer |
+  literal_boolean |
+  literal_tuple |
+  literal_array
 literal_char ::= lexeme_single_quote_str
 literal_string ::= lexeme_double_quote_str
 literal_float ::= literal_float_b10
 literal_integer ::=
-    literal_integer_b02 |
-    literal_integer_b08 |
-    literal_integer_b16 |
-    literal_integer_b10
+  literal_integer_b02 |
+  literal_integer_b08 |
+  literal_integer_b16 |
+  literal_integer_b10
 literal_boolean ::=
-    keyword_true |
-    keyword_false
+  keyword_true |
+  keyword_false
 literal_tuple ::=
-    literal_tuple_1_element |
-    literal_tuple_n_elements
+  literal_tuple_1_element |
+  literal_tuple_n_elements
 literal_array ::= literal_array_explicit_elements | literal_array_repeated_element
 literal_float_b10 ::= numeric_prefix_op? lexeme_dec_digits token_dot lexeme_dec_digits float_suffix_type?
 literal_integer_b02 ::= numeric_prefix_op? lexeme_bin_digits integer_suffix_type?
@@ -475,8 +475,8 @@ literal_integer_b08 ::= numeric_prefix_op? lexeme_oct_digits integer_suffix_type
 literal_integer_b10 ::= numeric_prefix_op? lexeme_dec_digits integer_suffix_type?
 literal_integer_b16 ::= numeric_prefix_op? lexeme_hex_digits integer_suffix_type?
 numeric_prefix_op ::=
-    token_add |
-    token_sub
+  token_add |
+  token_sub
 float_suffix_type ::= token_underscore ('f8' | 'f16' | 'f32' | 'f64' | 'f128' | 'f256')
 integer_suffix_type ::= token_underscore ('s8' | 's16' | 's32' | 's64' | 's128' | 's256' | 'sz' | 'u8' | 'u16' | 'u32' | 'u64' | 'u128' | 'u256' | 'uz')
 
