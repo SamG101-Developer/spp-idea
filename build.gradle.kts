@@ -25,12 +25,13 @@ kotlin {
 // Set the source sets used to build the project. The lexer
 // and parser are generated from the grammar on every build
 // rather than committed, so that CI always compiles against
-// the grammar as it is; adding the tasks as source dirs is
-// also what makes compilation depend on them.
+// the grammar as it is.
 sourceSets {
     main {
-        java.srcDir(tasks.named<GenerateLexerTask>("generateLexer").flatMap { it.targetRootOutputDir })
-        java.srcDir(tasks.named<GenerateParserTask>("generateParser").flatMap { it.targetRootOutputDir })
+        val generateLexer = tasks.named<GenerateLexerTask>("generateLexer")
+        val generateParser = tasks.named<GenerateParserTask>("generateParser")
+        java.srcDir(files(generateLexer.flatMap { it.targetRootOutputDir }).builtBy(generateLexer))
+        java.srcDir(files(generateParser.flatMap { it.targetRootOutputDir }).builtBy(generateParser))
     }
 }
 
