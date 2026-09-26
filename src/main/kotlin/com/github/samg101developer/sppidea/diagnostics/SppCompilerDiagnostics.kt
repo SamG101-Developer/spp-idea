@@ -17,7 +17,8 @@ import kotlin.concurrent.withLock
 import kotlin.io.path.absolute
 import kotlin.io.path.isRegularFile
 
-/** What one run of the compiler answered: the errors, by the file they point at, and the names it resolved, by file. */
+// What one run of the compiler answered: the errors, by the
+// file they point at, and the names it resolved, by file.
 data class SppAnalysis(
   val diagnostics: Map<String, List<SppDiagnostic>>,
   val symbols: Map<String, List<SppSymbol>>,
@@ -27,62 +28,66 @@ data class SppAnalysis(
   val comptimeValues: Map<String, List<SppComptimeValue>>,
 )
 
-/**
- * Runs the compiler for its diagnostics and the meaning of the names in one file, and remembers what it said.
- *
- * `spp` analyses a whole project at a time, so one run answers for every file in it and the result is shared rather
- * than recomputed per file. Two things keep the runs down: a run is skipped while nothing has been edited since the
- * last one, and never starts within [MIN_INTERVAL_MS] of the previous one, so a burst of typing costs one run rather
- * than one per keystroke. Until the language server arrives (see `docs/language-server-plan.md` in the compiler repo)
- * this is what an editor has, and a run is seconds rather than milliseconds.
- */
+// The service that runs the s++ compiler for its diagnostics,
+// and the meaning of the names in a file, caching the results.
+// Until a true language server has been built in s++, this is
+// the slow, but only way, to get the information the editor
+// needs to show errors and offer navigation.
 @Service(Service.Level.PROJECT)
 class SppCompilerDiagnostics(private val project: Project) {
 
   private val lock = ReentrantLock()
 
-  /// Volatile, like the symbols below, because the gutter reads it while a run may be holding the lock.
+  /// Volatile, like the symbols below, because the gutter reads
+  // it while a run may be holding the lock.
   @Volatile
   private var cached: SppAnalysis = SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
   private var cachedStamp: Long = -1
   private var cachedKey: String? = null
   private var lastRunAt: Long = 0
 
-  /**
-   * What every run so far worked out about the names in each file it indexed, kept apart from [cached] for two
-   * reasons: it is read from the editor's thread, so it is a plain volatile snapshot that no compile can make it
-   * wait for; and it accumulates rather than replacing, because following a name into another file indexes that
-   * file next, and the file navigated away from must not stop answering when it does.
-   */
+  // What every run so far worked out about the names in each
+  // file it indexed, kept apart from "cached" because it's
+  // read from the editor's thread, and it accumulates rather
+  // than replacing.
   @Volatile
   private var symbolsByFile: Map<String, List<SppSymbol>> = emptyMap()
 
-  /** What each type and namespace holds, kept the same way and for the same reason as the symbols above. */
+  // What each type and namespace holds, kept the same way
+  // and for the same reason as the symbols above.
   @Volatile
   private var membersByOwner: Map<String, SppMemberList> = emptyMap()
 
-  /** The calls in each file, and what each part of each file can name. Kept the same way, and read on the editor's
-   * thread by completion. */
+  // The calls in each file, and what each part of each file
+  // can name. Kept the same way, and read on the editor's
+  // thread by completion.
   @Volatile
   private var signaturesByFile: Map<String, List<SppSignature>> = emptyMap()
 
+  // The scopes in each file, and what each part of each file
+  // can name. Kept the same way, and read on the editor's
+  // thread by completion.
   @Volatile
   private var scopesByFile: Map<String, List<SppScope>> = emptyMap()
 
+  // The "cmp" calls in each file, and what each part of each
+  // file computed. Kept the same way, and read on the editor's
+  // thread by the line painter.
   @Volatile
   private var valuesByFile: Map<String, List<SppComptimeValue>> = emptyMap()
 
-  /** Files a run has been started for and not yet finished, so asking twice does not compile twice. */
+  // Files a run has been started for and not yet finished, so
+  // asking twice does not compile twice.
   private val warming = ConcurrentHashMap.newKeySet<String>()
 
-  /** Whether a compile is under way, which the gutter shows so that "nothing found yet" is visibly temporary. */
+  // Whether a compilation is under way, which the gutter shows
+  // so that "nothing found yet" is visibly temporary.
   @Volatile
   private var analysing = false
 
-  /**
-   * Every diagnostic the project has, by the file it points at. Returns the previous answer when nothing has changed
-   * or when one run has only just finished.
-   */
+  // Every diagnostic the project has, by the file it points
+  // at. Returns the previous answer when nothing has changed
+  // or when one run has only just finished.
   fun analyse(root: Path, executable: String, indexFile: Path? = null): SppAnalysis {
     val stamp = PsiModificationTracker.getInstance(project).modificationCount
     val key = "$root|${indexFile ?: "project"}"
@@ -92,8 +97,10 @@ class SppCompilerDiagnostics(private val project: Project) {
       val tooSoon = System.currentTimeMillis() - lastRunAt < MIN_INTERVAL_MS
       if (unchanged || (tooSoon && key == cachedKey)) return cached
 
-      // The gutter says which files are known and which are being worked out, so it is asked to redraw as the
-      // run starts as well as when it ends - otherwise the mark only ever changes once the answer is in.
+      // The gutter says which files are known and which are being
+      // worked out, so it is asked to redraw as the run starts as
+      // well as when it ends - otherwise the mark only ever changes
+      // once the answer is in.
       analysing = true
       refreshEditor()
       cached = try {
@@ -102,8 +109,10 @@ class SppCompilerDiagnostics(private val project: Project) {
         analysing = false
       }
 
-      // A file that was indexed is recorded even when it held no names worth recording, so that "analysed,
-      // nothing there" is remembered as an answer rather than looking like a file nobody has looked at yet.
+      // A file that was indexed is recorded even when it held no
+      // names worth recording, so that "analysed, nothing there"
+      // is remembered as an answer rather than looking like a file
+      // nobody has looked at yet.
       val fresh = cached.symbols.toMutableMap()
       indexFile?.let { fresh.putIfAbsent(it.toString(), emptyList()) }
       symbolsByFile = symbolsByFile + fresh
@@ -115,8 +124,10 @@ class SppCompilerDiagnostics(private val project: Project) {
       cachedKey = key
       lastRunAt = System.currentTimeMillis()
 
-      // What the editor shows about a file - the errors on it, and the gutter saying which of its functions are
-      // indexed - was worked out before this run finished, so ask for it to be worked out again.
+      // What the editor shows about a file - the errors on it,
+      // and the gutter saying which of its functions are indexed
+      // - was worked out before this run finished, so ask for it
+      // to be worked out again.
       refreshEditor()
       return cached
     }

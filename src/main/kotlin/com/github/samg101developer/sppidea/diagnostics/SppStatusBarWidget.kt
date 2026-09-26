@@ -17,57 +17,57 @@ import java.awt.event.MouseEvent
  */
 class SppStatusBarWidgetFactory : StatusBarWidgetFactory {
 
-    override fun getId(): String = ID
+  override fun getId(): String = ID
 
-    override fun getDisplayName(): String = "S++ Analysis"
+  override fun getDisplayName(): String = "S++ Analysis"
 
-    override fun createWidget(project: Project): StatusBarWidget = SppStatusBarWidget(project)
+  override fun createWidget(project: Project): StatusBarWidget = SppStatusBarWidget(project)
 
-    companion object {
-        const val ID = "SppAnalysisStatus"
-    }
+  companion object {
+    const val ID = "SppAnalysisStatus"
+  }
 }
 
 private class SppStatusBarWidget(private val project: Project) :
-    StatusBarWidget, StatusBarWidget.TextPresentation {
+  StatusBarWidget, StatusBarWidget.TextPresentation {
 
-    private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
-    private var statusBar: StatusBar? = null
+  private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
+  private var statusBar: StatusBar? = null
 
-    override fun ID(): String = SppStatusBarWidgetFactory.ID
+  override fun ID(): String = SppStatusBarWidgetFactory.ID
 
-    override fun getPresentation(): StatusBarWidget.WidgetPresentation = this
+  override fun getPresentation(): StatusBarWidget.WidgetPresentation = this
 
-    override fun install(statusBar: StatusBar) {
-        this.statusBar = statusBar
-        poll()
-    }
+  override fun install(statusBar: StatusBar) {
+    this.statusBar = statusBar
+    poll()
+  }
 
-    override fun dispose() {
-        Disposer.dispose(alarm)
-        statusBar = null
-    }
+  override fun dispose() {
+    Disposer.dispose(alarm)
+    statusBar = null
+  }
 
-    // A compile is started and finished by a background thread with nothing to notify from, so the widget asks. It is
-    // one boolean read a second, and it stops as soon as the widget goes away.
-    private fun poll() {
-        if (alarm.isDisposed) return
-        statusBar?.updateWidget(SppStatusBarWidgetFactory.ID)
-        alarm.addRequest(::poll, POLL_MS)
-    }
+  // A compile is started and finished by a background thread with nothing to notify from, so the widget asks. It is
+  // one boolean read a second, and it stops as soon as the widget goes away.
+  private fun poll() {
+    if (alarm.isDisposed) return
+    statusBar?.updateWidget(SppStatusBarWidgetFactory.ID)
+    alarm.addRequest(::poll, POLL_MS)
+  }
 
-    override fun getText(): String = when {
-        SppCompilerDiagnostics.getInstance(project).isAnalysing() -> "S++: analysing…"
-        else -> ""
-    }
+  override fun getText(): String = when {
+    SppCompilerDiagnostics.getInstance(project).isAnalysing() -> "S++: analysing…"
+    else -> ""
+  }
 
-    override fun getTooltipText(): String = "The S++ compiler is working out what the names in this project mean"
+  override fun getTooltipText(): String = "The S++ compiler is working out what the names in this project mean"
 
-    override fun getAlignment(): Float = java.awt.Component.LEFT_ALIGNMENT
+  override fun getAlignment(): Float = java.awt.Component.LEFT_ALIGNMENT
 
-    override fun getClickConsumer(): Consumer<MouseEvent>? = null
+  override fun getClickConsumer(): Consumer<MouseEvent>? = null
 
-    private companion object {
-        const val POLL_MS = 1000
-    }
+  private companion object {
+    const val POLL_MS = 1000
+  }
 }

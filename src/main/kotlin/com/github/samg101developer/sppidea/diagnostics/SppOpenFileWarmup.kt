@@ -12,14 +12,14 @@ import com.intellij.openapi.vfs.VirtualFile
  */
 class SppOpenFileWarmup : FileEditorManagerListener {
 
-    override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        if (file.extension != "spp") return
-        SppCompilerDiagnostics.getInstance(source.project).warmUp(file)
-    }
+  override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
+    if (file.extension != "spp") return
+    SppCompilerDiagnostics.getInstance(source.project).warmUp(file)
+  }
 
-    override fun selectionChanged(event: FileEditorManagerEvent) {
-        val file = event.newFile ?: return
-        if (file.extension != "spp") return
-        SppCompilerDiagnostics.getInstance(event.manager.project).warmUp(file)
-    }
+  override fun selectionChanged(event: FileEditorManagerEvent) {
+    val file = event.newFile ?: return
+    if (file.extension != "spp") return
+    SppCompilerDiagnostics.getInstance(event.manager.project).warmUp(file)
+  }
 }
