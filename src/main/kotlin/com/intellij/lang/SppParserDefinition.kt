@@ -15,10 +15,6 @@ import com.intellij.psi.tree.TokenSet
 // S++ files and create PSI elements. This class is responsible
 // for creating the lexer, parser, and PSI elements for S++ files.
 class SppParserDefinition : ParserDefinition {
-  companion object {
-    @JvmStatic
-    val FILE = IFileElementType(SppLanguage.INSTANCE)
-  }
 
   override fun createLexer(project: Project?): Lexer {
     return SppLexerAdaptor()
@@ -48,3 +44,5 @@ class SppParserDefinition : ParserDefinition {
     return SppTypes.Factory.createElement(node)
   }
 }
+
+val FILE = IFileElementType(SppLanguage.INSTANCE)

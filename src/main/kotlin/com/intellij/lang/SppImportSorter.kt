@@ -132,49 +132,44 @@ class SppImportSorter : PostFormatProcessor {
     return groups
   }
 
-  // The companion object contains utility functions for sorting
-  // "use" statements, including extracting the path, counting
-  // the number of "::" separators, determining the type of use
-  // statement, and comparing two use statements for sorting.
-  companion object {
-    private fun usePath(member: ASTNode): String {
-      val text = member.text
-      val idx = text.indexOf("use ")
-      return if (idx >= 0) text.substring(idx + 4).trim() else text.trim()
-    }
+}
 
-    // Count of :: separators in the path.
-    private fun colonColonCount(member: ASTNode): Int =
-      usePath(member).split("::").size - 1
+private fun usePath(member: ASTNode): String {
+  val text = member.text
+  val idx = text.indexOf("use ")
+  return if (idx >= 0) text.substring(idx + 4).trim() else text.trim()
+}
 
-    // Get the tag for ordering: use_var = 0 (sorts first),
-    // use_type = 1 (sorts second).
-    private fun useVarOrdinal(member: ASTNode): Int =
-      if (member.firstChildNode?.elementType == SppTypes.GLOBAL_USE_VAR_STATEMENT) 0 else 1
+// Count of :: separators in the path.
+private fun colonColonCount(member: ASTNode): Int =
+  usePath(member).split("::").size - 1
 
-    // Split the path into segments for comparison, using "::"
-    // as the separator.
-    private fun segments(member: ASTNode): List<String> =
-      usePath(member).split("::")
+// Get the tag for ordering: use_var = 0 (sorts first),
+// use_type = 1 (sorts second).
+private fun useVarOrdinal(member: ASTNode): Int =
+  if (member.firstChildNode?.elementType == SppTypes.GLOBAL_USE_VAR_STATEMENT) 0 else 1
 
-    // The comparator for sorting "use" statements, which compares
-    // by the number of "::" separators, then by the type of use
-    // statement (var vs type), and finally by the segments of the
-    // path in lexicographical order.
-    private val USE_COMPARATOR = Comparator<ASTNode> { a, b ->
-      val countCmp = colonColonCount(a) - colonColonCount(b)
-      if (countCmp != 0) return@Comparator countCmp
+// Split the path into segments for comparison, using "::"
+// as the separator.
+private fun segments(member: ASTNode): List<String> =
+  usePath(member).split("::")
 
-      val varCmp = useVarOrdinal(a) - useVarOrdinal(b)
-      if (varCmp != 0) return@Comparator varCmp
+// The comparator for sorting "use" statements, which compares
+// by the number of "::" separators, then by the type of use
+// statement (var vs type), and finally by the segments of the
+// path in lexicographical order.
+private val USE_COMPARATOR = Comparator<ASTNode> { a, b ->
+  val countCmp = colonColonCount(a) - colonColonCount(b)
+  if (countCmp != 0) return@Comparator countCmp
 
-      val segsA = segments(a)
-      val segsB = segments(b)
-      for (i in 0 until minOf(segsA.size, segsB.size)) {
-        val cmp = segsA[i].compareTo(segsB[i], ignoreCase = true)
-        if (cmp != 0) return@Comparator cmp
-      }
-      segsA.size - segsB.size
-    }
+  val varCmp = useVarOrdinal(a) - useVarOrdinal(b)
+  if (varCmp != 0) return@Comparator varCmp
+
+  val segsA = segments(a)
+  val segsB = segments(b)
+  for (i in 0 until minOf(segsA.size, segsB.size)) {
+    val cmp = segsA[i].compareTo(segsB[i], ignoreCase = true)
+    if (cmp != 0) return@Comparator cmp
   }
+  segsA.size - segsB.size
 }

@@ -363,11 +363,16 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
     return sb.toString()
   }
 
-  /** Converts `` `code` `` spans to `<code>` and escapes HTML everywhere else. */
   private fun renderInline(text: String): String {
     val sb = StringBuilder()
     var i = 0
     while (i < text.length) {
+      val ref = SppDocstringRefs.refAt(text, i)
+      if (ref != null) {
+        sb.append(paramRefHtml(ref.name))
+        i = ref.range.last + 1
+        continue
+      }
       if (text[i] == '`') {
         val end = text.indexOf('`', i + 1)
         if (end > i) {
@@ -381,6 +386,13 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
       }
     }
     return sb.toString()
+  }
+
+  private fun paramRefHtml(name: String): String {
+    val color = EditorColorsManager.getInstance().globalScheme
+      .getAttributes(SppSyntaxHighlighter.DOCSTRING_PARAM_REF)?.foregroundColor
+      ?: return "<code>${name.escapeHtml()}</code>"
+    return "<code style=\"color:#%02x%02x%02x\">${name.escapeHtml()}</code>".format(color.red, color.green, color.blue)
   }
 
   private fun colorizeSignature(sig: String): String {

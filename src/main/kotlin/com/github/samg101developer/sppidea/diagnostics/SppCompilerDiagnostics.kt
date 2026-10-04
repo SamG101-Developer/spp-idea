@@ -17,8 +17,11 @@ import kotlin.concurrent.withLock
 import kotlin.io.path.absolute
 import kotlin.io.path.isRegularFile
 
-// What one run of the compiler answered: the errors, by the
-// file they point at, and the names it resolved, by file.
+// What one run of the compiler produced: the errors by the
+// file they point at, and the names it resolved by file. All
+// split into their variant maps depending on what they are
+// and what they are used for, so the editor can request what's
+// needed.
 data class SppAnalysis(
   val diagnostics: Map<String, List<SppDiagnostic>>,
   val symbols: Map<String, List<SppSymbol>>,
@@ -76,6 +79,10 @@ class SppCompilerDiagnostics(private val project: Project) {
   @Volatile
   private var valuesByFile: Map<String, List<SppComptimeValue>> = emptyMap()
 
+  // The files the project tree underlines, with their folders,
+  // for holding an error.
+  private val problemFiles = SppProblemFiles(project)
+
   // Files a run has been started for and not yet finished, so
   // asking twice does not compile twice.
   private val warming = ConcurrentHashMap.newKeySet<String>()
@@ -120,6 +127,7 @@ class SppCompilerDiagnostics(private val project: Project) {
       signaturesByFile = signaturesByFile + cached.signatures
       scopesByFile = scopesByFile + cached.scopes
       valuesByFile = valuesByFile + cached.comptimeValues
+      problemFiles.update(cached.diagnostics)
       cachedStamp = stamp
       cachedKey = key
       lastRunAt = System.currentTimeMillis()
@@ -133,30 +141,36 @@ class SppCompilerDiagnostics(private val project: Project) {
     }
   }
 
-  /**
-   * What is already known about the names in [file], and nothing more: hover and go-to-definition are asked on the
-   * editor's thread, where neither starting a compile nor waiting on one that is running is acceptable - the
-   * editor would sit frozen for as long as it took. The annotator is what fills this in, so the answer is there a
-   * moment after a file has been highlighted, and stays there once it has.
-   */
+  // Get all the names the last run worked out for [file], for
+  // navigation and hover to use.
   fun cachedSymbolsFor(file: Path): List<SppSymbol> = symbolsByFile[file.toString()].orEmpty()
 
-  /** What the named type or namespace holds, for the list offered after a "." or a "::". */
+  // Get all the members the last run worked out for [owner],
+  // for completion to use. Used for completion following "."
+  // or "::".
   fun cachedMembersOf(owner: String): List<SppMember> = membersByOwner[owner]?.members.orEmpty()
 
-  /** The calls written in [file], for the names offered between their brackets. */
+  // Get all the calls the last run worked out for [file], for
+  // completion to use. Used for completion between brackets.
   fun cachedSignaturesFor(file: Path): List<SppSignature> = signaturesByFile[file.toString()].orEmpty()
 
-  /** What each part of [file] can name, for the names offered where nothing is being accessed. */
+  // Get all the scopes the last run worked out for [file],
+  // for completion to use. Used for completion with no member
+  // access (ie what's in this function scope that can used).
   fun cachedScopesFor(file: Path): List<SppScope> = scopesByFile[file.toString()].orEmpty()
 
-  /** What each "cmp" written in [file] computed, for showing the answer beside the declaration. */
+  // Get all the comptime values the last run worked out for
+  // [file], for the line painter to use. Used for showing the
+  // answer beside the declaration.
   fun cachedComptimeValuesFor(file: Path): List<SppComptimeValue> = valuesByFile[file.toString()].orEmpty()
 
-  /** Whether a compile is running right now, whatever it was asked about. */
+  // Whether a compilation is running right now, whatever it was
+  // asked about.
   fun isAnalysing(): Boolean = analysing
 
-  /** Ask the editor to work out again what it shows: the errors on a file, and the gutter marks beside it. */
+  // Get the editor to re-highlight, so that the gutter marks
+  // beside functions and the errors on a file are worked out
+  // again.
   private fun refreshEditor() {
     ApplicationManager.getApplication().invokeLater {
       if (!project.isDisposed) {
@@ -165,20 +179,21 @@ class SppCompilerDiagnostics(private val project: Project) {
     }
   }
 
-  /** Whether [file] has been analysed at all, which is a different question from whether it held any names. */
+  // Whether [file] has been analysed by the last run, so that
+  // the gutter can mark which functions are known and which are
+  // still being worked out.
   fun isAnalysed(file: Path): Boolean = symbolsByFile.containsKey(file.toString())
 
-  /** What the last run said about [file], for the gutter to mark which functions did not get that far. */
+  // What the last run said about [file], for the gutter to
+  // mark which functions did not get that far.
   fun cachedDiagnosticsFor(file: Path): List<SppDiagnostic> = cached.diagnostics[file.toString()].orEmpty()
 
-  /**
-   * Work out what the names in [file] mean, in the background, so that asking about them shortly will be answered.
-   *
-   * Hover and go-to-definition can only use what is already known, and what fills that in is the annotator's run -
-   * which happens when a file is highlighted, and for that file alone. Without this, a file just opened, or just
-   * returned to, answers nothing until the next highlighting pass, which reads as navigation working only every
-   * few attempts.
-   */
+  // Warm a cache which answers what the names in [file] mean,
+  // so that navigation and hover can use it. A file the project
+  // itself holds is indexed along with all of its siblings,
+  // so opening the next file costs nothing. A file from a
+  // dependency is not in that sweep, and is worth indexing by
+  // itself when someone is actually looking at it.
   fun warmUp(file: VirtualFile) {
     val path = runCatching { file.toNioPath().absolute() }.getOrNull() ?: return
     if (symbolsByFile.containsKey(path.toString())) {
@@ -188,9 +203,12 @@ class SppCompilerDiagnostics(private val project: Project) {
     val root = projectRootFor(path) ?: return
     val executable = resolveSppExecutable() ?: return
 
-    // One compile analyses every module there is, so a file the project itself holds is indexed along with all of
-    // its siblings rather than on its own - opening the next file then costs nothing. A file from a dependency is
-    // not in that sweep, and is worth indexing by itself when someone is actually looking at it.
+    // One compile analyses every module there is, so a file the
+    // project itself holds is indexed along with all of its
+    // siblings rather than on its own - opening the next file
+    // then costs nothing. A file from a dependency is not in
+    // that sweep, and is worth indexing by itself when someone
+    // is actually looking at it.
     val target = if (isProjectFile(root, path)) null else path
     val key = "$root|${target ?: "project"}"
     if (!warming.add(key)) {
@@ -206,23 +224,25 @@ class SppCompilerDiagnostics(private val project: Project) {
     }
   }
 
-  /** Whether the file is the project's own, rather than one of the dependencies it keeps under "vcs". */
+  // Whether the file is the project's own, rather than one of
+  // the dependencies it keeps under "vcs".
   private fun isProjectFile(root: Path, file: Path): Boolean =
     file.startsWith(root) && !root.relativize(file).toString().startsWith("vcs")
 
   private fun run(root: String, executable: String, indexFile: Path?): SppAnalysis {
-    // No pty, unlike the run configuration: the compiler's progress bars check whether stdout is a terminal and
-    // leave a pipe alone, which is exactly what is wanted here - the only thing on stdout is then the json.
+    // Invoke the analysis compilation (a general compilation
+    // using "spp build", but with some fine-tuning flags to
+    // make it faster and extract what we need in JSON.
     val commandLine = GeneralCommandLine(executable)
       .withParameters("build", "-m", "dev", "--analyse-only", "--skip-vcs", "--message-format=json")
       .withParameters(
-        // Indexing the whole project costs the same compile as indexing one file of it, so that is the
-        // default; a single file is asked for only when it is not one the project holds.
-        if (indexFile == null) listOf("--index-project") else listOf("--index-file", indexFile.toString()),
+        if (indexFile == null) listOf("--index-project") else listOf("--index-file", indexFile.toString())
       )
       .withWorkDirectory(root)
       .withCharset(Charsets.UTF_8)
 
+    // Get the output from the command, which is the JSON info
+    // that will get parsed into the maps the editor needs.
     val output = try {
       CapturingProcessHandler(commandLine).runProcess(TIMEOUT_MS, true)
     } catch (e: Exception) {
@@ -230,12 +250,15 @@ class SppCompilerDiagnostics(private val project: Project) {
       return SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
     }
 
+    // Handle a timeout (if the compiler is taking too long to
+    // run).
     if (output.isTimeout) {
       thisLogger().warn("'spp build --analyse-only' timed out after ${TIMEOUT_MS}ms")
       return SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
     }
 
-    // Errors are the only thing reported, so an exit code of zero means an empty map rather than no answer.
+    // Errors are the only thing reported, so an exit code of
+    // zero means an empty map rather than no answer.
     val diagnostics = SppDiagnosticParser.parse(output.stdout)
       .flatMap { diagnostic -> diagnostic.labels.map { it.file to diagnostic } }
       .distinct()
@@ -254,10 +277,10 @@ class SppCompilerDiagnostics(private val project: Project) {
 
     fun getInstance(project: Project): SppCompilerDiagnostics = project.getService(SppCompilerDiagnostics::class.java)
 
-    /**
-     * The project directory a file belongs to: the nearest ancestor holding an `spp.toml`, which is what the
-     * compiler itself resolves a project from and what it has to be run in.
-     */
+    // The project directory a file belongs to: the nearest
+    // ancestor holding an `spp.toml`, which is what the compiler
+    // itself resolves a project from and what it has to be run
+    // in.
     fun projectRootFor(file: Path): Path? = generateSequence(file.parent) { it.parent }
       .firstOrNull { it.resolve("spp.toml").isRegularFile() }
   }

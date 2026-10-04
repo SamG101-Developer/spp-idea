@@ -1,68 +1,106 @@
-<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>com.github.samg101developer.sppidea</id>
-    <name>spp-lang</name>
-    <vendor>samg101-developer</vendor>
+  <id>com.github.samg101developer.sppidea</id>
+  <name>spp-lang</name>
+  <vendor>samg101-developer</vendor>
 
-    <depends>com.intellij.modules.platform</depends>
-    <resource-bundle>messages.MyBundle</resource-bundle>
+  <depends>com.intellij.modules.platform</depends>
+  <resource-bundle>messages.MyBundle</resource-bundle>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <fileType name="S++ File" language="S++" implementationClass="com.intellij.lang.SppFileType" fieldName="INSTANCE" extensions="spp"/>
-        <lang.parserDefinition language="S++" implementationClass="com.intellij.lang.SppParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="S++" implementationClass="com.intellij.lang.SppSyntaxHighlighterFactory"/>
-        <lang.braceMatcher language="S++" implementationClass="com.intellij.lang.SppBraceMatcher"/>
-        <lang.quoteHandler language="S++" implementationClass="com.intellij.lang.SppQuoteHandler"/>
-        <lang.commenter language="S++" implementationClass="com.intellij.lang.SppCommenter"/>
-        <annotator language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
-        <editor.linePainter implementation="com.github.samg101developer.sppidea.diagnostics.SppErrorLinePainter"/>
-        <externalAnnotator language="S++"
-                           implementationClass="com.github.samg101developer.sppidea.diagnostics.SppExternalAnnotator"/>
-        <completion.contributor language="S++"
-                                implementationClass="com.github.samg101developer.sppidea.diagnostics.SppCompletionContributor"/>
-        <codeInsight.lineMarkerProvider language="S++"
-                                       implementationClass="com.github.samg101developer.sppidea.diagnostics.SppIndexLineMarkerProvider"/>
-        <gotoDeclarationHandler
-            implementation="com.github.samg101developer.sppidea.diagnostics.SppGotoDeclarationHandler"/>
-        <annotator language="S++" implementationClass="com.intellij.lang.SppDocstringAnnotator"/>
-        <enterBetweenBracesDelegate language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
-        <enterHandlerDelegate implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
-        <lang.formatter language="S++" implementationClass="com.intellij.lang.SppFormattingModelBuilder"/>
-        <langCodeStyleSettingsProvider implementation="com.intellij.lang.SppCodeStyleSettingsProvider"/>
-        <postFormatProcessor implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
-        <postFormatProcessor implementation="com.intellij.lang.SppImportSorter"/>
-        <postFormatProcessor implementation="com.intellij.lang.SppDocstringFillPostFormatProcessor"/>
-        <lang.documentationProvider language="S++" implementationClass="com.intellij.lang.SppDocumentationProvider"/>
-        <breadcrumbsInfoProvider implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
-        <lang.foldingBuilder language="S++" implementationClass="com.intellij.lang.SppFoldingBuilder"/>
-    </extensions>
+  <extensions defaultExtensionNs="com.intellij">
+    <fileType
+        name="S++ File" language="S++" implementationClass="com.intellij.lang.SppFileType" fieldName="INSTANCE"
+        extensions="spp"/>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="S++" displayType="BALLOON"/>
-        <statusBarWidgetFactory id="SppAnalysisStatus"
-                                implementation="com.github.samg101developer.sppidea.diagnostics.SppStatusBarWidgetFactory"/>
-        <applicationConfigurable parentId="language" id="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"
-                                  displayName="S++" instance="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"/>
-        <moduleType id="SPP_MODULE_TYPE" implementationClass="com.github.samg101developer.sppidea.module.SppModuleType"/>
-        <configurationType implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
-    </extensions>
+    <lang.parserDefinition
+        language="S++" implementationClass="com.intellij.lang.SppParserDefinition"/>
+    <lang.syntaxHighlighterFactory
+        language="S++" implementationClass="com.intellij.lang.SppSyntaxHighlighterFactory"/>
+    <lang.braceMatcher
+        language="S++" implementationClass="com.intellij.lang.SppBraceMatcher"/>
+    <lang.quoteHandler
+        language="S++" implementationClass="com.intellij.lang.SppQuoteHandler"/>
+    <lang.commenter
+        language="S++" implementationClass="com.intellij.lang.SppCommenter"/>
+    <lang.formatter
+        language="S++" implementationClass="com.intellij.lang.SppFormattingModelBuilder"/>
+    <lang.documentationProvider
+        language="S++" implementationClass="com.intellij.lang.SppDocumentationProvider"/>
+    <lang.foldingBuilder
+        language="S++" implementationClass="com.intellij.lang.SppFoldingBuilder"/>
 
-    <projectListeners>
-        <listener class="com.github.samg101developer.sppidea.diagnostics.SppOpenFileWarmup"
-                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
-    </projectListeners>
+    <externalAnnotator
+        language="S++" implementationClass="com.github.samg101developer.sppidea.diagnostics.SppExternalAnnotator"/>
+    <completion.contributor
+        language="S++" implementationClass="com.github.samg101developer.sppidea.diagnostics.SppCompletionContributor"/>
+    <codeInsight.lineMarkerProvider
+        language="S++"
+        implementationClass="com.github.samg101developer.sppidea.diagnostics.SppIndexLineMarkerProvider"/>
+    <enterBetweenBracesDelegate
+        language="S++" implementationClass="com.intellij.lang.SppEnterBetweenBracesDelegate"/>
 
-    <actions>
-        <!-- Added next to the run widget in the new UI, and to the old toolbar and Run menu, so the
-             build "hammer" sits beside Run wherever the run controls happen to be. -->
-        <action id="Spp.Build"
-                class="com.github.samg101developer.sppidea.run.SppBuildAction"
-                text="Build"
-                description="Run 'spp build' for the selected S++ configuration"
-                icon="AllIcons.Actions.Compile">
-            <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
-            <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
-            <add-to-group group-id="RunMenu" anchor="first"/>
-        </action>
-    </actions>
+    <annotator
+        language="S++" implementationClass="com.intellij.lang.SppAnnotator"/>
+    <annotator
+        language="S++" implementationClass="com.intellij.lang.SppDocstringAnnotator"/>
+
+    <editor.linePainter
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppErrorLinePainter"/>
+    <gotoDeclarationHandler
+        order="first" implementation="com.intellij.lang.SppBraceGotoHandler"/>
+    <gotoDeclarationHandler
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppGotoDeclarationHandler"/>
+    <problemFileHighlightFilter
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppProblemFileHighlightFilter"/>
+    <langCodeStyleSettingsProvider
+        implementation="com.intellij.lang.SppCodeStyleSettingsProvider"/>
+    <breadcrumbsInfoProvider
+        implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
+    <enterHandlerDelegate
+        implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
+    <postFormatProcessor
+        implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
+    <postFormatProcessor
+        implementation="com.intellij.lang.SppImportSorter"/>
+    <postFormatProcessor
+        implementation="com.intellij.lang.SppDocstringFillPostFormatProcessor"/>
+  </extensions>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <notificationGroup
+        id="S++" displayType="BALLOON" bundle="messages.MyBundle" key="notification.group.s++"/>
+    <colorSettingsPage
+        implementation="com.intellij.lang.SppColorSettingsPage"/>
+    <additionalTextAttributes
+        scheme="Default" file="colorSchemes/SppDefault.xml"/>
+    <additionalTextAttributes
+        scheme="Darcula" file="colorSchemes/SppDarcula.xml"/>
+    <statusBarWidgetFactory
+        id="SppAnalysisStatus"
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppStatusBarWidgetFactory"/>
+    <applicationConfigurable
+        parentId="language" id="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable" displayName="S++"
+        instance="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"/>
+    <newProjectWizard.generator
+        implementation="com.github.samg101developer.sppidea.module.SppNewProjectWizard"/>
+    <directoryProjectGenerator
+        implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
+    <configurationType
+        implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+  </extensions>
+
+  <projectListeners>
+    <listener
+        class="com.github.samg101developer.sppidea.diagnostics.SppOpenFileWarmup"
+        topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+  </projectListeners>
+
+  <actions>
+    <action
+        id="Spp.Build" class="com.github.samg101developer.sppidea.run.SppBuildAction" text="Build"
+        description="Run 'spp build' for the selected S++ configuration" icon="AllIcons.Actions.Compile">
+      <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
+      <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
+      <add-to-group group-id="RunMenu" anchor="first"/>
+    </action>
+  </actions>
 </idea-plugin>

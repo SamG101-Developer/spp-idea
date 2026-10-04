@@ -219,11 +219,17 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
         break
       }
 
-      // No space within limit => force-break at the column.
+      // No space within limit => force-break at the column, but
+      // never inside a "[name]" reference, which is kept whole on
+      // the line it starts on.
       val breakAt = remaining.lastIndexOf(' ', available)
       if (breakAt <= 0) {
-        result += "$indent# ${remaining.substring(0, available)}"
-        remaining = remaining.substring(available).trimStart()
+        val cut = SppDocstringRefs.findIn(remaining)
+          .firstOrNull { available > it.range.first && available <= it.range.last }
+          ?.let { it.range.last + 1 }
+          ?: available
+        result += "$indent# ${remaining.substring(0, cut)}"
+        remaining = remaining.substring(cut).trimStart()
 
       // Break at the last space within the available limit.
       } else {

@@ -148,6 +148,11 @@ class SppDocstringAnnotator : Annotator {
       .newAnnotation(HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'")
       .range(tag.nameRange!!)
       .create()
+
+    // "[name]" references name a parameter, "self" included when
+    // the function takes one.
+    val hasSelf = paramGroup.functionParameterList.any { it.functionParameterSelf != null }
+    validateRefs(docComments, actualParamNames + if (hasSelf) setOf("self") else emptySet(), "parameter", holder)
   }
 
   // Same validation as the function docstring, but for class
@@ -215,6 +220,10 @@ class SppDocstringAnnotator : Annotator {
       .newAnnotation(HighlightSeverity.WARNING, "No compile-time generic parameter named '${tag.name}'")
       .range(tag.nameRange!!)
       .create()
+
+    // On a class, "[name]" references name an attribute, as "@let"
+    // documents them.
+    validateRefs(docComments, actualAttrNames, "attribute", holder)
   }
 
   // Same validation as the function docstring, but for sup
@@ -261,6 +270,30 @@ class SppDocstringAnnotator : Annotator {
       .newAnnotation(HighlightSeverity.WARNING, "No constant named '${tag.name}'")
       .range(tag.nameRange!!)
       .create()
+
+    // A sup block has no parameters, so there is nothing a "[name]"
+    // reference could name.
+    validateRefs(docComments, emptySet(), "parameter", holder)
+  }
+
+  // Check every "[name]" reference in the docstring names one of
+  // [valid], skipping code blocks. [what] is what a name stands for
+  // here, for the warning.
+  private fun validateRefs(comments: List<PsiComment>, valid: Set<String>, what: String, holder: AnnotationHolder) {
+    var inCodeBlock = false
+    for (comment in comments) {
+      if (SppDocstringRefs.isFence(comment.text)) {
+        inCodeBlock = !inCodeBlock
+        continue
+      }
+      if (inCodeBlock) continue
+
+      val base = comment.textRange.startOffset
+      for (ref in SppDocstringRefs.findIn(comment.text).filter { it.name !in valid }) holder
+        .newAnnotation(HighlightSeverity.WARNING, "No $what named '${ref.name}'")
+        .range(TextRange(base + ref.nameRange.first, base + ref.nameRange.last + 1))
+        .create()
+    }
   }
 
   // Regex to match a numbered list item, e.g. "1. ", "2. ",

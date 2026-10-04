@@ -27,7 +27,7 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(SppSyntaxHighlighter.FUNCTION_DECLARATION)
           .create()
       }
 
@@ -37,7 +37,21 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(SppSyntaxHighlighter.COROUTINE_DECLARATION)
+          .create()
+      }
+
+      // The name a "cmp" statement or a comp generic parameter
+      // declares. Their uses are coloured the same, from the
+      // compiler's analysis.
+      is SppIdentifier if (parent is SppCmpStatement
+          || parent is SppGenericParameterCompRequired
+          || parent is SppGenericParameterCompOptional
+          || parent is SppGenericParameterCompVariadic) -> {
+        holder
+          .newSilentAnnotation(HighlightSeverity.INFORMATION)
+          .range(element)
+          .textAttributes(SppSyntaxHighlighter.CMP_IDENTIFIER)
           .create()
       }
 
@@ -46,16 +60,23 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE_DECLARATION)
           .create()
       }
 
-      // Treat a runtime member access as a "field" for highlighting.
+      // A runtime member access: a method when it is called, a
+      // field otherwise.
       is SppIdentifier if parent is SppPostfixExpressionOpRuntimeMemberAccess -> {
+        val op = parent.parent as? SppPostfixExpressionOp
+        val ops = (op?.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: emptyList()
+        val nextOp = op?.let { ops.getOrNull(ops.indexOf(it) + 1) }
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(
+            if (nextOp?.postfixExpressionOpFunctionCall != null) SppSyntaxHighlighter.METHOD_CALL
+            else SppSyntaxHighlighter.MEMBER_ACCESS
+          )
           .create()
       }
 
@@ -65,7 +86,7 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+          .textAttributes(SppSyntaxHighlighter.NAMESPACE)
           .create()
       }
 
@@ -76,7 +97,7 @@ class SppAnnotator : Annotator {
           is SppParsePostfixExpressionStrictlyStaticAccessOne -> {
             val isLast = grandParent.postfixExpressionOpStaticMemberAccessList.lastOrNull() == parent
             if (isLast) SppSyntaxHighlighter.IDENTIFIER
-            else SppSyntaxHighlighter.TYPE_IDENTIFIER
+            else SppSyntaxHighlighter.NAMESPACE
           }
 
           // Annotation path: SppAnnotation already colours the
@@ -91,9 +112,9 @@ class SppAnnotator : Annotator {
             val ops = (op?.parent as? SppPostfixExpression)?.postfixExpressionOpList ?: emptyList()
             val nextOp = op?.let { ops.getOrNull(ops.indexOf(it) + 1) }
             when {
-              nextOp?.postfixExpressionOpFunctionCall != null -> SppSyntaxHighlighter.FUNCTION_CALL
+              nextOp?.postfixExpressionOpFunctionCall != null -> SppSyntaxHighlighter.NAMESPACED_CALL
               nextOp == null -> SppSyntaxHighlighter.IDENTIFIER
-              else -> SppSyntaxHighlighter.TYPE_IDENTIFIER
+              else -> SppSyntaxHighlighter.NAMESPACE
             }
           }
         }
@@ -114,7 +135,7 @@ class SppAnnotator : Annotator {
           ops.any { it.postfixExpressionOpStaticMemberAccess != null } -> holder
             .newSilentAnnotation(HighlightSeverity.INFORMATION)
             .range(element)
-            .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+            .textAttributes(SppSyntaxHighlighter.NAMESPACE)
             .create()
 
           ops.firstOrNull()?.postfixExpressionOpFunctionCall != null -> holder
@@ -131,7 +152,7 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(SppSyntaxHighlighter.NAMED_ARGUMENT)
           .create()
       }
 
@@ -141,7 +162,7 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.ATTRIBUTE)
+          .textAttributes(SppSyntaxHighlighter.PATTERN_FIELD)
           .create()
       }
 
@@ -150,7 +171,18 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.TYPE_IDENTIFIER)
+          .textAttributes(SppSyntaxHighlighter.NAMESPACE)
+          .create()
+      }
+
+      // A numeric literal's type suffix ("_uz", "_f64"), underscore
+      // included, is part of the number: the lexer reads it as an
+      // underscore and a name, so it is coloured as the number here.
+      is SppIntegerSuffixType, is SppFloatSuffixType -> {
+        holder
+          .newSilentAnnotation(HighlightSeverity.INFORMATION)
+          .range(element)
+          .textAttributes(SppSyntaxHighlighter.NUMBER)
           .create()
       }
 
@@ -170,7 +202,7 @@ class SppAnnotator : Annotator {
         holder
           .newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(element)
-          .textAttributes(SppSyntaxHighlighter.STRING)
+          .textAttributes(SppSyntaxHighlighter.CHAR)
           .create()
         annotateEscapeSequences(element, holder)
       }
@@ -268,6 +300,17 @@ class SppAnnotator : Annotator {
         .newSilentAnnotation(HighlightSeverity.INFORMATION)
         .range(TextRange(base + match.range.first, base + match.range.last + 1))
         .textAttributes(SppSyntaxHighlighter.DOCSTRING_INLINE_CODE)
+        .create()
+    }
+
+    // Parameter references: [name]. Not inside a code block,
+    // where brackets are code.
+    if (comment !is PsiComment || SppDocstringRefs.isInCodeFence(comment)) return
+    for (ref in SppDocstringRefs.findIn(text)) {
+      holder
+        .newSilentAnnotation(HighlightSeverity.INFORMATION)
+        .range(TextRange(base + ref.range.first, base + ref.range.last + 1))
+        .textAttributes(SppSyntaxHighlighter.DOCSTRING_PARAM_REF)
         .create()
     }
   }

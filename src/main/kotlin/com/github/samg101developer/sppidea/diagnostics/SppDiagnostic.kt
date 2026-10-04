@@ -1,11 +1,8 @@
 package com.github.samg101developer.sppidea.diagnostics
 
-/**
- * One place an error points at: where it is, what it says about it, and whether it is the place the error is reported
- * (the primary label) or one that explains it - "first defined here", "moved here". The line and character are what
- * `spp` printed them as: zero-based, and counted in UTF-16 code units, which is what a [com.intellij.openapi.editor.Document]
- * counts offsets in too, so no conversion is needed on this side.
- */
+// One place an error points at, containing information about
+// error location, text labels, and whether it's context or the
+// actual error line. All encoding/position info is UTF-16.
 data class SppLabel(
   val file: String,
   val message: String,
@@ -17,7 +14,9 @@ data class SppLabel(
   val generated: Boolean,
 )
 
-/** Where something is, as the compiler reports it: a file plus a zero-based line and UTF-16 column. */
+/// A span location, containing the file to span in, the start
+// and end lines and columns, and whether it is generated code
+// or not. All encoding/position info is UTF-16.
 data class SppSpan(
   val file: String,
   val startLine: Int,
@@ -27,61 +26,66 @@ data class SppSpan(
   val generated: Boolean,
 )
 
-/**
- * One name in the source and what it resolved to: what kind of thing it is, what it is called, the type it has, and
- * where it was declared. This is what hover reads, and what go-to-definition jumps by.
- */
+// An abstracted symbol, containing the relevant information
+// from the compiler's output. This is what hover reads, and
+// what go-to-definition jumps by.
 data class SppSymbol(
   val kind: String,
   val name: String,
   val type: String,
   val use: SppSpan,
   val definition: SppSpan,
-  /** What a compile-time constant worked out to; empty for everything that is not one. */
-  val value: String = "",
+  val value: String = "", // Compile-time constant's evaluated value (empty for non-constants)
 )
 
-/** The label's place, in the shape the rest of the plugin measures positions in. */
+// The label's place, in the shape the rest of the plugin
+// measures positions in.
 fun SppLabel.asSpan(): SppSpan = SppSpan(file, startLine, startCharacter, endLine, endCharacter, generated)
 
-/** One thing reachable through a "." or a "::": a method, an attribute, a constant, or a namespace under another. */
+// One thing reachable through a "." or a "::": a method,
+// an attribute, a constant, or a namespace under another.
 data class SppMember(
   val name: String,
   val kind: String,
   val type: String,
   val definition: SppSpan?,
-  /** How a function can be called, one per overload; empty for everything that is not one. */
   val signatures: List<String> = emptyList(),
+  val visibility: String = "",
 )
 
-/** Everything one type or namespace holds, which is what a completion list after "." or "::" offers. */
+// Everything one type or namespace holds, which is what
+// a completion list after "." or "::" offers.
 data class SppMemberList(
   val owner: String,
   val of: String,
   val members: List<SppMember>,
 )
 
-/** What a call resolved to: where its arguments are written, and the parameters they fill. */
+// What a call resolved to: where its arguments are written,
+// and the parameters they fill.
 data class SppSignature(
   val name: String,
   val arguments: SppSpan,
   val params: List<SppMember>,
 )
 
-/** What a "cmp" declaration computed, which the compiler knows because it ran it. */
+// What a "cmp" declaration computed, which the compiler
+// knows because it ran it.
 data class SppComptimeValue(
   val name: String,
   val value: String,
   val where: SppSpan,
 )
 
-/** What one part of a file can name: everything the scope covering that region holds. */
+// What one part of a file can name: everything the scope
+// covering that region holds.
 data class SppScope(
   val where: SppSpan,
   val names: List<SppMember>,
 )
 
-/** One error, as `spp build --message-format=json` reports it. */
+// One error, as `spp build --message-format=json` reports
+// it.
 data class SppDiagnostic(
   val code: String,
   val title: String,
@@ -93,31 +97,38 @@ data class SppDiagnostic(
   val primaryLabel: SppLabel? get() = labels.firstOrNull { it.primary }
 }
 
-/**
- * Reads the compiler's diagnostics out of a run's output.
- *
- * The parser below is deliberately small and self-contained rather than a library call: the only json this plugin
- * ever reads is what the compiler itself writes, one object per line, and a bundled json library is not something a
- * plugin can count on being there at runtime.
- */
+
+// Reads the compiler's diagnostics out of a run's output,
+// which is one JSON object per line.
 object SppDiagnosticParser {
 
-  /** Every diagnostic in [output]; anything that is not a json object (progress bars, notices) is skipped. */
-  fun parse(output: String): List<SppDiagnostic> = objectsIn(output, "diagnostic").mapNotNull { toDiagnostic(it) }
+  // From compiler JSON output, create the list of diagnostics
+  // that will be shown in the editor. Each diagnostic is one
+  // error, with its code, title, severity, labels, note and
+  // help text.
+  fun parse(output: String): List<SppDiagnostic> =
+    objectsIn(output, "diagnostic").mapNotNull { toDiagnostic(it) }
 
-  /** Every resolved name in [output], which the compiler reports for the one file it was asked to index. */
-  fun parseSymbols(output: String): List<SppSymbol> = objectsIn(output, "symbol").mapNotNull { toSymbol(it) }
+  // From compiler JSON output, create the list of symbols that
+  // will be scanned.
+  fun parseSymbols(output: String): List<SppSymbol> =
+    objectsIn(output, "symbol").mapNotNull { toSymbol(it) }
 
-  /** Every call in the indexed files, with the parameters it resolved to. */
-  fun parseSignatures(output: String): List<SppSignature> = objectsIn(output, "signature").mapNotNull { obj ->
-    SppSignature(
-      name = obj["name"] as? String ?: "",
-      arguments = toSpan(obj["arguments"]) ?: return@mapNotNull null,
-      params = membersOf(obj),
-    )
-  }
+  // From compiler JSON output, create the list of signatures
+  // that will be scanned. Each signature is the way a function
+  // is called, and the parameters it takes. A function with
+  // several overloads has several signatures, one per overload.
+  fun parseSignatures(output: String): List<SppSignature> =
+    objectsIn(output, "signature").mapNotNull { obj ->
+      SppSignature(
+        name = obj["name"] as? String ?: "",
+        arguments = toSpan(obj["arguments"]) ?: return@mapNotNull null,
+        params = membersOf(obj),
+      )
+    }
 
-  /** What each "cmp" declaration in the indexed files computed. */
+  // From compiler JSON output, create the list of compile-time
+  // declarations and their evaluated values.
   fun parseComptimeValues(output: String): List<SppComptimeValue> =
     objectsIn(output, "comptime").mapNotNull { obj ->
       SppComptimeValue(
@@ -127,23 +138,44 @@ object SppDiagnosticParser {
       )
     }
 
-  /** What each part of the indexed files can name. */
+  // From compiler JSON output, create the list of scopes that
+  // will be scanned. Each scope is a region of a file, and the
+  // names that are reachable in that region.
   fun parseScopes(output: String): List<SppScope> = objectsIn(output, "scope").mapNotNull { obj ->
     SppScope(where = toSpan(obj["where"]) ?: return@mapNotNull null, names = membersOf(obj))
   }
 
+  // From compiler JSON output, create the list of members that
+  // will be scanned. The "members" are the things reachable
+  // through "." or "::" from a type or namespace, and the "of"
+  // is the type or namespace they are in.
+  fun parseMembers(output: String): List<SppMemberList> =
+    objectsIn(output, "members").mapNotNull { obj ->
+      SppMemberList(
+        owner = obj["owner"] as? String ?: return@mapNotNull null,
+        of = obj["of"] as? String ?: "",
+        members = membersOf(obj),
+      )
+    }
+
+  // From a compiler JSON object, mapping an object's "members"
+  // field to a list of [SppMember]s.
   private fun membersOf(obj: Map<*, *>): List<SppMember> =
     (obj["members"] as? List<*>).orEmpty().mapNotNull { toMember(it) }
 
-  /** What each type and namespace reached from the indexed files holds. */
-  fun parseMembers(output: String): List<SppMemberList> = objectsIn(output, "members").mapNotNull { obj ->
-    SppMemberList(
-      owner = obj["owner"] as? String ?: return@mapNotNull null,
-      of = obj["of"] as? String ?: "",
-      members = membersOf(obj),
-    )
-  }
+  // Extract JSON objects from the compiler's output, which
+  // is one per line, and filter by the "kind" field. Any line
+  // that is not a JSON object is ignored (progress bars, etc).
+  private fun objectsIn(output: String, kind: String): List<Map<*, *>> =
+    output.split('\r', '\n')
+      .map { it.trim() }
+      .filter { it.startsWith("{") && it.endsWith("}") }
+      .mapNotNull { runCatching { JsonReader(it).readValue() as? Map<*, *> }.getOrNull() }
+      .filter { it["kind"] == kind }
 
+  // Convert a compiler JSON object to an [SppMember], which is
+  // one of the things reachable through "." or "::" from a type
+  // or namespace.
   private fun toMember(value: Any?): SppMember? {
     val obj = value as? Map<*, *> ?: return null
     return SppMember(
@@ -152,17 +184,12 @@ object SppDiagnosticParser {
       type = obj["type"] as? String ?: "",
       definition = toSpan(obj["definition"]),
       signatures = (obj["signatures"] as? List<*>).orEmpty().filterIsInstance<String>(),
+      visibility = obj["visibility"] as? String ?: "",
     )
   }
 
-  /** The json objects in [output] of one kind, skipping progress bars, notices and anything unparseable. */
-  private fun objectsIn(output: String, kind: String): List<Map<*, *>> =
-    output.split('\r', '\n')
-      .map { it.trim() }
-      .filter { it.startsWith("{") && it.endsWith("}") }
-      .mapNotNull { runCatching { JsonReader(it).readValue() as? Map<*, *> }.getOrNull() }
-      .filter { it["kind"] == kind }
-
+  // Convert a compiler JSON object to an [SppSymbol], which is
+  // one of the things the compiler knows about a name in a file.
   private fun toSymbol(obj: Map<*, *>): SppSymbol? = SppSymbol(
     kind = obj["symbol"] as? String ?: return null,
     name = obj["name"] as? String ?: "",
@@ -171,6 +198,8 @@ object SppDiagnosticParser {
     definition = toSpan(obj["definition"]) ?: return null,
   )
 
+  // Convert a compiler JSON object to an [SppSpan], which is a
+  // location in a file, with start and end lines and columns.
   private fun toSpan(value: Any?): SppSpan? {
     val obj = value as? Map<*, *> ?: return null
     val start = obj["start"] as? Map<*, *>
@@ -185,6 +214,9 @@ object SppDiagnosticParser {
     )
   }
 
+  // Convert a compiler JSON object to an [SppDiagnostic], which is
+  // one of the errors the compiler reported, with its code, title,
+  // severity, labels, note and help text.
   private fun toDiagnostic(obj: Map<*, *>): SppDiagnostic? {
     val labels = (obj["labels"] as? List<*>).orEmpty().mapNotNull { toLabel(it) }
     return SppDiagnostic(
@@ -197,6 +229,10 @@ object SppDiagnosticParser {
     )
   }
 
+  // Convert a compiler JSON object to an [SppLabel], which
+  // is one of the places an error points at, with its file,
+  // message, primary flag, start and end lines and columns,
+  // and generated flag.
   private fun toLabel(value: Any?): SppLabel? {
     val obj = value as? Map<*, *> ?: return null
     val start = obj["start"] as? Map<*, *>
@@ -215,14 +251,16 @@ object SppDiagnosticParser {
   }
 }
 
-/**
- * A minimal json reader: objects, arrays, strings, numbers, booleans and null, which is all the compiler emits.
- * Numbers come back as [Double], the way every json parser without a schema hands them over.
- */
+// A minimal JSON reader, supporting: objects, arrays, strings,
+// numbers, booleans and null. This is all the compiler emits.
 private class JsonReader(private val text: String) {
 
   private var at = 0
 
+  // Generic "read a value" function, which dispatches to the
+  // right reader based on the first character. This is the
+  // entry point for reading a JSON value, and is called
+  // recursively for nested objects and arrays.
   fun readValue(): Any? {
     skipSpace()
     return when (val c = peek()) {
@@ -236,6 +274,9 @@ private class JsonReader(private val text: String) {
     }
   }
 
+  // Read a JSON object, which is a set of key-value pairs
+  // enclosed in braces. The keys are strings, and the values
+  // are any JSON value. The pairs are separated by commas.
   private fun readObject(): Map<String, Any?> {
     val out = LinkedHashMap<String, Any?>()
     expect('{')
@@ -258,6 +299,8 @@ private class JsonReader(private val text: String) {
     }
   }
 
+  // Read a JSON array, which is a list of values enclosed in
+  // brackets. The values are separated by commas.
   private fun readArray(): List<Any?> {
     val out = ArrayList<Any?>()
     expect('[')
@@ -276,6 +319,10 @@ private class JsonReader(private val text: String) {
     }
   }
 
+  // Read a JSON string, which is a sequence of characters
+  // enclosed in double quotes. The string may contain escape
+  // sequences, which are interpreted according to the JSON
+  // specification.
   private fun readString(): String {
     expect('"')
     val out = StringBuilder()
@@ -288,6 +335,10 @@ private class JsonReader(private val text: String) {
     }
   }
 
+  // Read a JSON escape sequence, which is a backslash followed
+  // by a character that indicates the type of escape. The
+  // escape sequence is interpreted according to the JSON
+  // specification, and the resulting character is returned.
   private fun readEscape(): Char = when (val c = next()) {
     '"', '\\', '/' -> c
     'b' -> '\b'
@@ -299,30 +350,49 @@ private class JsonReader(private val text: String) {
     else -> error("unknown escape '\\$c' at ${at - 1}")
   }
 
+  // Read a JSON number, which is a sequence of digits that may
+  // include a decimal point and an exponent. The number is
+  // interpreted according to the JSON specification, and the
+  // resulting value is returned as a Double.
   private fun readNumber(): Double {
     val start = at
-    while (at < text.length && (text[at] == '-' || text[at] == '+' || text[at] == '.' ||
-          text[at] == 'e' || text[at] == 'E' || text[at].isDigit())
+    while (
+      at < text.length && (text[at] == '-' || text[at] == '+' || text[at] == '.' || text[at] == 'e' || text[at] == 'E' || text[at].isDigit())
     ) {
       at++
     }
     return text.substring(start, at).toDouble()
   }
 
+  // Read a JSON literal, which is a fixed string that represents
+  // a specific value. The literal is compared to the expected
+  // string, and if it matches, the corresponding value is
+  // returned. If it does not match, an error is thrown.
   private fun <T> readLiteral(literal: String, value: T): T {
     require(text.startsWith(literal, at)) { "expected '$literal' at $at" }
     at += literal.length
     return value
   }
 
+  // Skip whitespace characters, which are ignored in JSON. This
+  // function advances the current position until a non-whitespace
+  // character is found, or the end of the input is reached.
   private fun skipSpace() {
     while (at < text.length && text[at].isWhitespace()) at++
   }
 
-  private fun peek(): Char = if (at < text.length) text[at] else error("unexpected end of json")
+  // Peek at the next character without consuming it. If the end
+  // of the input is reached, an error is thrown.
+  private fun peek(): Char =
+    if (at < text.length) text[at] else error("unexpected end of json")
 
-  private fun next(): Char = peek().also { at++ }
+  // Consume the next character and return it. If the end of the
+  // input is reached, an error is thrown.
+  private fun next(): Char =
+    peek().also { at++ }
 
+  // Expect the next character to be the given one, and consume
+  // it. If it is not, throw an error.
   private fun expect(c: Char) {
     require(next() == c) { "expected '$c' at ${at - 1}" }
   }
