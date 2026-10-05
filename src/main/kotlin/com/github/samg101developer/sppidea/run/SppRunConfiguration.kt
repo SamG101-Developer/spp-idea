@@ -26,6 +26,12 @@ class SppRunConfiguration(
   public override fun getOptions(): SppRunConfigurationOptions =
     super.getOptions() as SppRunConfigurationOptions
 
+  override var modulesPath: String?
+    get() = options.modulesPath
+    set(value) {
+      options.modulesPath = value
+    }
+
   override var moduleName: String?
     get() = options.moduleName
     set(value) {

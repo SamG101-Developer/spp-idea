@@ -49,6 +49,12 @@ class SppCidrRunConfiguration(
   private val sppOptions: SppRunConfigurationOptions
     get() = options as SppRunConfigurationOptions
 
+  override var modulesPath: String?
+    get() = sppOptions.modulesPath
+    set(value) {
+      sppOptions.modulesPath = value
+    }
+
   override var moduleName: String?
     get() = sppOptions.moduleName
     set(value) {
