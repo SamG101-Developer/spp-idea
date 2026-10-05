@@ -2,14 +2,15 @@ package com.github.samg101developer.sppidea.clion
 
 import com.github.samg101developer.sppidea.run.SppRunProfile
 import com.intellij.execution.ExecutionException
-import com.intellij.execution.ExecutionManager
 import com.intellij.execution.configurations.RunProfile
+import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.runners.GenericProgramRunner
 import com.intellij.execution.runners.executeState
+import com.intellij.execution.ui.RunContentDescriptor
 
 // Runs S++ configurations in CLion. Being C++ run configurations
 // as far as CLion is concerned, they would otherwise be picked
@@ -19,18 +20,16 @@ import com.intellij.execution.runners.executeState
 // "spp" as usual, and the others report that they do not apply.
 // Debug is left alone: the configuration suppresses it, so no
 // runner offers it.
-class SppCidrProgramRunner : ProgramRunner<RunnerSettings> {
+class SppCidrProgramRunner : GenericProgramRunner<RunnerSettings>() {
   override fun getRunnerId(): String = "SppCidrProgramRunner"
 
   override fun canRun(executorId: String, profile: RunProfile): Boolean =
     profile is SppRunProfile && executorId != DefaultDebugExecutor.EXECUTOR_ID
 
-  override fun execute(environment: ExecutionEnvironment) {
+  override fun doExecute(state: RunProfileState, environment: ExecutionEnvironment): RunContentDescriptor? {
     if (environment.executor.id != DefaultRunExecutor.EXECUTOR_ID) {
       throw ExecutionException("S++ configurations can only be run, not with '${environment.executor.actionName}'.")
     }
-    ExecutionManager.getInstance(environment.project).startRunProfile(environment) { state ->
-      executeState(state, environment, this)
-    }
+    return executeState(state, environment, this)
   }
 }
