@@ -1,0 +1,16 @@
+<!-- Loaded only in CLion: see the optional dependency in plugin.xml. -->
+<idea-plugin>
+  <!-- CidrRunConfiguration and the runner API come from here. -->
+  <depends>com.intellij.nativeDebug</depends>
+
+  <extensions defaultExtensionNs="com.github.samg101developer.sppidea">
+    <runConfigurationProvider
+        implementation="com.github.samg101developer.sppidea.clion.SppCidrRunConfiguration$Provider"/>
+  </extensions>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <programRunner
+        implementation="com.github.samg101developer.sppidea.clion.SppCidrProgramRunner"
+        order="first"/>
+  </extensions>
+</idea-plugin>

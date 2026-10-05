@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.GenerateLexerTask
 import org.jetbrains.intellij.platform.gradle.tasks.GenerateParserTask
@@ -64,6 +65,9 @@ dependencies {
         bundledModules(providers.gradleProperty("platformBundledModules").map { it.split(',') })
 
         testFramework(TestFrameworkType.Platform)
+
+        // The CLion-only classes, merged into this plugin's jar.
+        pluginComposedModule(project(":clion"))
     }
 }
 
@@ -122,6 +126,10 @@ intellijPlatform {
     pluginVerification {
         ides {
             recommended()
+
+            // The CLion-only classes (the "clion" module) are only
+            // loaded, and so only checked, in CLion.
+            create(IntelliJPlatformType.CLion, providers.gradleProperty("platformVersion"))
         }
     }
 }
@@ -167,6 +175,22 @@ tasks {
 
 intellijPlatformTesting {
     runIde {
+        // CLion, to try the CLion-only part of the plugin (see
+        // the "clion" module) in a sandbox.
+        register("runClion") {
+            type = IntelliJPlatformType.CLion
+            version = providers.gradleProperty("platformVersion")
+            task {
+                jvmArgumentProviders += CommandLineArgumentProvider {
+                    listOf(
+                        "-Djb.privacy.policy.text=<!--999.999-->",
+                        "-Djb.consents.confirmation.enabled=false",
+                        "-Didea.trust.all.projects=true",
+                    )
+                }
+            }
+        }
+
         register("runIdeForUiTests") {
             task {
                 jvmArgumentProviders += CommandLineArgumentProvider {

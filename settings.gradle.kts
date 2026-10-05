@@ -3,3 +3,5 @@ plugins {
 }
 
 rootProject.name = "spp-idea"
+
+include(":clion")
