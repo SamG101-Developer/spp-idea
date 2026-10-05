@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 // tool window, not a run console.
 object SppBuildLauncher {
 
-  fun build(project: Project, configuration: SppRunConfiguration) {
+  fun build(project: Project, configuration: SppRunProfile) {
     if (!configuration.kind.buildable) return
 
     // Ensure the s++ executable has been provided in the settings.
@@ -39,7 +39,7 @@ object SppBuildLauncher {
     // Ensure the working directory is set, which is the module's
     // content root. Todo: Allow manual selection of CWD in the
     // fun config.
-    val workingDir = configuration.resolveWorkingDirectory() ?: return notifyFailure(
+    val workingDir = SppRunSupport.resolveWorkingDirectory(configuration) ?: return notifyFailure(
       project,
       "Select a module for '${configuration.name}' before building it.",
     )
@@ -130,7 +130,7 @@ object SppBuildLauncher {
   // previous build has finished.
   private class RestartBuildAction(
     private val project: Project,
-    private val configuration: SppRunConfiguration,
+    private val configuration: SppRunProfile,
     private val handler: ProcessHandler,
   ) : AnAction("Rerun Build", "Run 'spp build' again", AllIcons.Actions.Restart), DumbAware {
 

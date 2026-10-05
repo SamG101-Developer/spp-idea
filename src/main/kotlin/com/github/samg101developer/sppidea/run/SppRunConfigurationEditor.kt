@@ -11,7 +11,7 @@ import javax.swing.JComponent
 
 // Editor UI for run configuration: module + optional program
 // arguments passed after the "spp" subcommand.
-class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<SppRunConfiguration>() {
+class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<SppRunProfile>() {
   private val moduleComboBox = ModulesComboBox().apply { fillModules(project) }
   private val argumentsField = JBTextField()
 
@@ -19,7 +19,7 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
   // back to the project's only module, so a single-module
   // S++ project opens the form already filled in and consistent
   // with the name the configuration was given.
-  override fun resetEditorFrom(configuration: SppRunConfiguration) {
+  override fun resetEditorFrom(configuration: SppRunProfile) {
     val moduleManager = ModuleManager.getInstance(project)
     moduleComboBox.selectedModule = configuration.moduleName
       ?.takeIf { it.isNotBlank() }
@@ -32,7 +32,7 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
   // arguments chosen in the form. The module is stored by name,
   // so that the configuration can be serialized and deserialized
   // without holding a reference to the module object.
-  override fun applyEditorTo(configuration: SppRunConfiguration) {
+  override fun applyEditorTo(configuration: SppRunProfile) {
     configuration.moduleName = moduleComboBox.selectedModule?.name
     configuration.programArguments = argumentsField.text
   }

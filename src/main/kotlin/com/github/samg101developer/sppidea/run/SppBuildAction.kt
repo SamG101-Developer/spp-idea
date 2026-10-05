@@ -35,6 +35,6 @@ class SppBuildAction : AnAction(), DumbAware {
 
   // Return the selected S++ run configuration, or null if none
   // is selected.
-  private fun selectedSppConfiguration(e: AnActionEvent): SppRunConfiguration? =
-    e.project?.let { RunManager.getInstance(it).selectedConfiguration?.configuration as? SppRunConfiguration }
+  private fun selectedSppConfiguration(e: AnActionEvent): SppRunProfile? =
+    e.project?.let { RunManager.getInstance(it).selectedConfiguration?.configuration as? SppRunProfile }
 }
