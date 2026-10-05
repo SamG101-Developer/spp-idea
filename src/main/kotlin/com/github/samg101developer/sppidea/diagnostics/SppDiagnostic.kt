@@ -106,62 +106,63 @@ object SppDiagnosticParser {
   // that will be shown in the editor. Each diagnostic is one
   // error, with its code, title, severity, labels, note and
   // help text.
-  fun parse(output: String): List<SppDiagnostic> =
-    objectsIn(output, "diagnostic").mapNotNull { toDiagnostic(it) }
+  fun parse(output: String, toIde: (String) -> String = { it }): List<SppDiagnostic> =
+    objectsIn(output, "diagnostic").mapNotNull { toDiagnostic(it, toIde) }
 
   // From compiler JSON output, create the list of symbols that
   // will be scanned.
-  fun parseSymbols(output: String): List<SppSymbol> =
-    objectsIn(output, "symbol").mapNotNull { toSymbol(it) }
+  fun parseSymbols(output: String, toIde: (String) -> String = { it }): List<SppSymbol> =
+    objectsIn(output, "symbol").mapNotNull { toSymbol(it, toIde) }
 
   // From compiler JSON output, create the list of signatures
   // that will be scanned. Each signature is the way a function
   // is called, and the parameters it takes. A function with
   // several overloads has several signatures, one per overload.
-  fun parseSignatures(output: String): List<SppSignature> =
+  fun parseSignatures(output: String, toIde: (String) -> String = { it }): List<SppSignature> =
     objectsIn(output, "signature").mapNotNull { obj ->
       SppSignature(
         name = obj["name"] as? String ?: "",
-        arguments = toSpan(obj["arguments"]) ?: return@mapNotNull null,
-        params = membersOf(obj),
+        arguments = toSpan(obj["arguments"], toIde) ?: return@mapNotNull null,
+        params = membersOf(obj, toIde),
       )
     }
 
   // From compiler JSON output, create the list of compile-time
   // declarations and their evaluated values.
-  fun parseComptimeValues(output: String): List<SppComptimeValue> =
+  fun parseComptimeValues(output: String, toIde: (String) -> String = { it }): List<SppComptimeValue> =
     objectsIn(output, "comptime").mapNotNull { obj ->
       SppComptimeValue(
         name = obj["name"] as? String ?: "",
         value = obj["value"] as? String ?: return@mapNotNull null,
-        where = toSpan(obj["where"]) ?: return@mapNotNull null,
+        where = toSpan(obj["where"], toIde) ?: return@mapNotNull null,
       )
     }
 
   // From compiler JSON output, create the list of scopes that
   // will be scanned. Each scope is a region of a file, and the
   // names that are reachable in that region.
-  fun parseScopes(output: String): List<SppScope> = objectsIn(output, "scope").mapNotNull { obj ->
-    SppScope(where = toSpan(obj["where"]) ?: return@mapNotNull null, names = membersOf(obj))
+  fun parseScopes(output: String, toIde: (String) -> String = { it }): List<SppScope> =
+    objectsIn(output, "scope").mapNotNull { obj ->
+      SppScope(where = toSpan(obj["where"], toIde) ?: return@mapNotNull null, names = membersOf(obj, toIde))
   }
 
   // From compiler JSON output, create the list of members that
   // will be scanned. The "members" are the things reachable
   // through "." or "::" from a type or namespace, and the "of"
   // is the type or namespace they are in.
-  fun parseMembers(output: String): List<SppMemberList> =
+  fun parseMembers(output: String, toIde: (String) -> String = { it }): List<SppMemberList> =
     objectsIn(output, "members").mapNotNull { obj ->
       SppMemberList(
         owner = obj["owner"] as? String ?: return@mapNotNull null,
         of = obj["of"] as? String ?: "",
-        members = membersOf(obj),
+        members = membersOf(obj, toIde),
       )
     }
 
   // From a compiler JSON object, mapping an object's "members"
   // field to a list of [SppMember]s.
-  private fun membersOf(obj: Map<*, *>): List<SppMember> =
-    (obj["members"] as? List<*>).orEmpty().mapNotNull { toMember(it) }
+  private fun membersOf(obj: Map<*, *>, toIde: (String) -> String): List<SppMember> =
+    (obj["members"] as? List<*>).orEmpty().mapNotNull { toMember(it, toIde) }
 
   // Extract JSON objects from the compiler's output, which
   // is one per line, and filter by the "kind" field. Any line
@@ -176,13 +177,13 @@ object SppDiagnosticParser {
   // Convert a compiler JSON object to an [SppMember], which is
   // one of the things reachable through "." or "::" from a type
   // or namespace.
-  private fun toMember(value: Any?): SppMember? {
+  private fun toMember(value: Any?, toIde: (String) -> String): SppMember? {
     val obj = value as? Map<*, *> ?: return null
     return SppMember(
       name = obj["name"] as? String ?: return null,
       kind = obj["member"] as? String ?: "",
       type = obj["type"] as? String ?: "",
-      definition = toSpan(obj["definition"]),
+      definition = toSpan(obj["definition"], toIde),
       signatures = (obj["signatures"] as? List<*>).orEmpty().filterIsInstance<String>(),
       visibility = obj["visibility"] as? String ?: "",
     )
@@ -190,22 +191,22 @@ object SppDiagnosticParser {
 
   // Convert a compiler JSON object to an [SppSymbol], which is
   // one of the things the compiler knows about a name in a file.
-  private fun toSymbol(obj: Map<*, *>): SppSymbol? = SppSymbol(
+  private fun toSymbol(obj: Map<*, *>, toIde: (String) -> String): SppSymbol? = SppSymbol(
     kind = obj["symbol"] as? String ?: return null,
     name = obj["name"] as? String ?: "",
     type = obj["type"] as? String ?: "",
-    use = toSpan(obj["use"]) ?: return null,
-    definition = toSpan(obj["definition"]) ?: return null,
+    use = toSpan(obj["use"], toIde) ?: return null,
+    definition = toSpan(obj["definition"], toIde) ?: return null,
   )
 
   // Convert a compiler JSON object to an [SppSpan], which is a
   // location in a file, with start and end lines and columns.
-  private fun toSpan(value: Any?): SppSpan? {
+  private fun toSpan(value: Any?, toIde: (String) -> String): SppSpan? {
     val obj = value as? Map<*, *> ?: return null
     val start = obj["start"] as? Map<*, *>
     val end = obj["end"] as? Map<*, *>
     return SppSpan(
-      file = obj["file"] as? String ?: return null,
+      file = toIde(obj["file"] as? String ?: return null),
       startLine = (start?.get("line") as? Double)?.toInt() ?: 0,
       startCharacter = (start?.get("character") as? Double)?.toInt() ?: 0,
       endLine = (end?.get("line") as? Double)?.toInt() ?: 0,
@@ -217,8 +218,8 @@ object SppDiagnosticParser {
   // Convert a compiler JSON object to an [SppDiagnostic], which is
   // one of the errors the compiler reported, with its code, title,
   // severity, labels, note and help text.
-  private fun toDiagnostic(obj: Map<*, *>): SppDiagnostic? {
-    val labels = (obj["labels"] as? List<*>).orEmpty().mapNotNull { toLabel(it) }
+  private fun toDiagnostic(obj: Map<*, *>, toIde: (String) -> String): SppDiagnostic? {
+    val labels = (obj["labels"] as? List<*>).orEmpty().mapNotNull { toLabel(it, toIde) }
     return SppDiagnostic(
       code = obj["code"] as? String ?: "",
       title = obj["title"] as? String ?: "",
@@ -233,13 +234,13 @@ object SppDiagnosticParser {
   // is one of the places an error points at, with its file,
   // message, primary flag, start and end lines and columns,
   // and generated flag.
-  private fun toLabel(value: Any?): SppLabel? {
+  private fun toLabel(value: Any?, toIde: (String) -> String): SppLabel? {
     val obj = value as? Map<*, *> ?: return null
     val start = obj["start"] as? Map<*, *>
     val end = obj["end"] as? Map<*, *>
     val generated = obj["generated"] == true || start == null || end == null
     return SppLabel(
-      file = obj["file"] as? String ?: return null,
+      file = toIde(obj["file"] as? String ?: return null),
       message = obj["message"] as? String ?: "",
       primary = obj["primary"] == true,
       startLine = (start?.get("line") as? Double)?.toInt() ?: 0,

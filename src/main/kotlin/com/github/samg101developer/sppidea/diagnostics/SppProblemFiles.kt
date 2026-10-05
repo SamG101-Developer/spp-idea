@@ -7,6 +7,7 @@ import com.intellij.openapi.util.Condition
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.problems.WolfTheProblemSolver
+import java.nio.file.Path
 
 // The project tree underlines a file holding an error, and
 // every folder above it, with a red squiggle, but only for
@@ -47,7 +48,7 @@ class SppProblemFiles(private val project: Project) {
   private fun apply(paths: Set<String>) {
     if (project.isDisposed) return
     val fs = LocalFileSystem.getInstance()
-    val now = paths.mapNotNull { fs.findFileByPath(it) }.toSet()
+    val now = paths.mapNotNull { runCatching { fs.findFileByNioFile(Path.of(it)) }.getOrNull() }.toSet()
     val wolf = WolfTheProblemSolver.getInstance(project)
     (marked - now).forEach { wolf.clearProblemsFromExternalSource(it, this) }
     (now - marked).forEach { wolf.reportProblemsFromExternalSource(it, this) }

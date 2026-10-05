@@ -4,6 +4,8 @@ import com.github.samg101developer.sppidea.settings.resolveSppExecutable
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
@@ -86,6 +88,11 @@ class SppCompilerDiagnostics(private val project: Project) {
   // Files a run has been started for and not yet finished, so
   // asking twice does not compile twice.
   private val warming = ConcurrentHashMap.newKeySet<String>()
+
+  // The last failure reported, so the same one is not reported
+  // again on every run.
+  @Volatile
+  private var lastFailure: String? = null
 
   // Whether a compilation is under way, which the gutter shows
   // so that "nothing found yet" is visibly temporary.
@@ -230,13 +237,18 @@ class SppCompilerDiagnostics(private val project: Project) {
     file.startsWith(root) && !root.relativize(file).toString().startsWith("vcs")
 
   private fun run(root: String, executable: String, indexFile: Path?): SppAnalysis {
+    // The compiler may see the project under other paths than
+    // the IDE does (a Windows IDE with the project in WSL), so
+    // paths are translated on the way in and on the way out.
+    val paths = SppPathMapping.forRoot(Path.of(root))
+
     // Invoke the analysis compilation (a general compilation
     // using "spp build", but with some fine-tuning flags to
     // make it faster and extract what we need in JSON.
     val commandLine = GeneralCommandLine(executable)
       .withParameters("build", "-m", "dev", "--analyse-only", "--skip-vcs", "--message-format=json")
       .withParameters(
-        if (indexFile == null) listOf("--index-project") else listOf("--index-file", indexFile.toString())
+        if (indexFile == null) listOf("--index-project") else listOf("--index-file", paths.toCompiler(indexFile))
       )
       .withWorkDirectory(root)
       .withCharset(Charsets.UTF_8)
@@ -247,33 +259,60 @@ class SppCompilerDiagnostics(private val project: Project) {
       CapturingProcessHandler(commandLine).runProcess(TIMEOUT_MS, true)
     } catch (e: Exception) {
       thisLogger().warn("Could not run '${commandLine.commandLineString}'", e)
-      return SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
+      reportFailure("Could not run the S++ compiler at $executable: ${e.message ?: e}")
+      return EMPTY
     }
 
     // Handle a timeout (if the compiler is taking too long to
     // run).
     if (output.isTimeout) {
       thisLogger().warn("'spp build --analyse-only' timed out after ${TIMEOUT_MS}ms")
-      return SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
+      reportFailure("The S++ compiler did not finish analysing $root within ${TIMEOUT_MS / 1000}s.")
+      return EMPTY
     }
+
+    // A failed exit with JSON is just a project with errors in
+    // it. One with no JSON at all means the compiler could not
+    // analyse anything, and stderr says why.
+    if (output.exitCode != 0 && output.stdout.lineSequence().none { it.trimStart().startsWith("{") }) {
+      val reason = output.stderr.trim().lines().takeLast(10).joinToString("\n")
+      thisLogger().warn("'spp build --analyse-only' in $root exited with ${output.exitCode}: $reason")
+      reportFailure("The S++ compiler exited with code ${output.exitCode} in $root.\n$reason")
+      return EMPTY
+    }
+    lastFailure = null
 
     // Errors are the only thing reported, so an exit code of
     // zero means an empty map rather than no answer.
-    val diagnostics = SppDiagnosticParser.parse(output.stdout)
+    val toIde = paths::toIde
+    val diagnostics = SppDiagnosticParser.parse(output.stdout, toIde)
       .flatMap { diagnostic -> diagnostic.labels.map { it.file to diagnostic } }
       .distinct()
       .groupBy({ it.first }, { it.second })
-    val symbols = SppDiagnosticParser.parseSymbols(output.stdout).groupBy { it.use.file }
-    val members = SppDiagnosticParser.parseMembers(output.stdout).associateBy { it.owner }
-    val signatures = SppDiagnosticParser.parseSignatures(output.stdout).groupBy { it.arguments.file }
-    val scopes = SppDiagnosticParser.parseScopes(output.stdout).groupBy { it.where.file }
-    val values = SppDiagnosticParser.parseComptimeValues(output.stdout).groupBy { it.where.file }
+    val symbols = SppDiagnosticParser.parseSymbols(output.stdout, toIde).groupBy { it.use.file }
+    val members = SppDiagnosticParser.parseMembers(output.stdout, toIde).associateBy { it.owner }
+    val signatures = SppDiagnosticParser.parseSignatures(output.stdout, toIde).groupBy { it.arguments.file }
+    val scopes = SppDiagnosticParser.parseScopes(output.stdout, toIde).groupBy { it.where.file }
+    val values = SppDiagnosticParser.parseComptimeValues(output.stdout, toIde).groupBy { it.where.file }
     return SppAnalysis(diagnostics, symbols, members, signatures, scopes, values)
+  }
+
+  // Say once that analysis is failing, rather than on every one
+  // of the runs that keep failing the same way, which would bury
+  // the editor in balloons. A run that works resets it.
+  private fun reportFailure(message: String) {
+    if (message == lastFailure) return
+    lastFailure = message
+    NotificationGroupManager.getInstance()
+      .getNotificationGroup("S++")
+      .createNotification("S++ analysis failed", message, NotificationType.WARNING)
+      .notify(project)
   }
 
   companion object {
     private const val MIN_INTERVAL_MS = 2_000L
     private const val TIMEOUT_MS = 120_000
+    private val EMPTY = SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
 
     fun getInstance(project: Project): SppCompilerDiagnostics = project.getService(SppCompilerDiagnostics::class.java)
 

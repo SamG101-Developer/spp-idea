@@ -16,6 +16,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
@@ -44,6 +45,16 @@ object SppBuildLauncher {
       "Select a module for '${configuration.name}' before building it.",
     )
 
+    // Starting a process is not allowed on the UI thread, which
+    // the Build action runs on, so the rest happens on a pooled
+    // thread. The build progress is safe to report from there.
+    ApplicationManager.getApplication().executeOnPooledThread {
+      start(project, configuration, sppPath, workingDir)
+    }
+  }
+
+  // Start "spp build" and report it to the build tool window.
+  private fun start(project: Project, configuration: SppRunProfile, sppPath: String, workingDir: String) {
     // Create the command line and start the process. If it fails
     // to start, report it as a notification.
     val commandLine = sppCommandLine(sppPath, SppCommand.BUILD, workingDir, configuration.programArguments)
