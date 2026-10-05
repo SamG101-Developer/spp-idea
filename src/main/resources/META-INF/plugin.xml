@@ -82,6 +82,8 @@
         instance="com.github.samg101developer.sppidea.settings.SppSettingsConfigurable"/>
     <newProjectWizard.generator
         implementation="com.github.samg101developer.sppidea.module.SppNewProjectWizard"/>
+    <postStartupActivity
+        implementation="com.github.samg101developer.sppidea.module.SppNewProjectWizard$ScaffoldActivity"/>
     <directoryProjectGenerator
         implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
     <configurationType

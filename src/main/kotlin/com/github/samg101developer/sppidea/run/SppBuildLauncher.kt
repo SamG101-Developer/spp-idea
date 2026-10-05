@@ -1,11 +1,12 @@
 package com.github.samg101developer.sppidea.run
 
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.intellij.build.BuildDescriptor
 import com.intellij.build.BuildViewManager
 import com.intellij.build.DefaultBuildDescriptor
 import com.intellij.build.events.impl.FailureResultImpl
 import com.intellij.build.events.impl.SuccessResultImpl
-import com.intellij.build.progress.BuildProgressDescriptorImpl
+import com.intellij.build.progress.BuildProgressDescriptor
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
@@ -64,7 +65,10 @@ object SppBuildLauncher {
     // Create a progress object for the build, and listen to the
     // process events to report them to the build console.
     val progress = BuildViewManager.createBuildProgress(project)
-      .start(BuildProgressDescriptorImpl("Running 'spp build'…", buildDescriptor))
+      .start(object : BuildProgressDescriptor {
+        override fun getTitle(): String = "Running 'spp build'…"
+        override fun getBuildDescriptor(): BuildDescriptor = buildDescriptor
+      })
 
     handler.addProcessListener(object : ProcessListener {
       override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
