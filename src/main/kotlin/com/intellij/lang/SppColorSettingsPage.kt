@@ -72,6 +72,7 @@ private val ATTRIBUTES = arrayOf(
   AttributesDescriptor("Comments//Docstring parameter reference", SppSyntaxHighlighter.DOCSTRING_PARAM_REF),
 
   AttributesDescriptor("Analysis//Code not analysed (after an error)", SppSyntaxHighlighter.UNREACHED_CODE),
+  AttributesDescriptor("Analysis//Code left out of this build (!cfg)", SppSyntaxHighlighter.INACTIVE_CODE),
   AttributesDescriptor("Analysis//End-of-line error", SppSyntaxHighlighter.INLINE_ERROR),
   AttributesDescriptor("Analysis//End-of-line explanation", SppSyntaxHighlighter.INLINE_EXPLANATION),
   AttributesDescriptor("Analysis//End-of-line compile-time value", SppSyntaxHighlighter.INLINE_CMP_VALUE),
@@ -115,6 +116,7 @@ private val TAGS = mapOf(
   "doc_code" to SppSyntaxHighlighter.DOCSTRING_INLINE_CODE,
   "doc_ref" to SppSyntaxHighlighter.DOCSTRING_PARAM_REF,
   "unreached" to SppSyntaxHighlighter.UNREACHED_CODE,
+  "inactive" to SppSyntaxHighlighter.INACTIVE_CODE,
   "inline_error" to SppSyntaxHighlighter.INLINE_ERROR,
   "inline_explanation" to SppSyntaxHighlighter.INLINE_EXPLANATION,
   "inline_value" to SppSyntaxHighlighter.INLINE_CMP_VALUE,
@@ -141,6 +143,9 @@ gen self.<field>x</field>
 gen self.<field>y</field>
 }
 }
+
+<inactive>!cfg(os="windows")
+fun separator() -> Str { ret Str::from("windows") }</inactive>
 
 fun <fn_decl>repeated</fn_decl>[T: Copy, cmp <cmp>n</cmp>: USize, cmp <cmp>step</cmp>: USize = 1<num_suffix>_uz</num_suffix>](value: T) -> Arr[T, <cmp>n</cmp>] {
 ret Arr[T, <cmp>n</cmp>]::<ns_call>new_filled</ns_call>(value)

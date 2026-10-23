@@ -114,6 +114,8 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
     // come from the plugin's additions to the bundled schemes.
     val UNREACHED_CODE: TextAttributesKey =
       TextAttributesKey.createTextAttributesKey("SPP_UNREACHED_CODE", CodeInsightColors.NOT_USED_ELEMENT_ATTRIBUTES)
+    val INACTIVE_CODE: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_INACTIVE_CODE", UNREACHED_CODE)
     val INLINE_ERROR: TextAttributesKey =
       TextAttributesKey.createTextAttributesKey("SPP_INLINE_ERROR", DefaultLanguageHighlighterColors.LINE_COMMENT)
     val INLINE_EXPLANATION: TextAttributesKey =

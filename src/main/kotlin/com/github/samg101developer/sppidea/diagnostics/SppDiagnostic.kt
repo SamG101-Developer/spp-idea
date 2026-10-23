@@ -77,6 +77,13 @@ data class SppComptimeValue(
   val where: SppSpan,
 )
 
+// Source a "!cfg" condition left out of the build: the member
+// it annotates, annotation included. None of it is compiled,
+// so the editor greys it out.
+data class SppInactiveRegion(
+  val where: SppSpan,
+)
+
 // What one part of a file can name: everything the scope
 // covering that region holds.
 data class SppScope(
@@ -136,6 +143,13 @@ object SppDiagnosticParser {
         value = obj["value"] as? String ?: return@mapNotNull null,
         where = toSpan(obj["where"], toIde) ?: return@mapNotNull null,
       )
+    }
+
+  // From compiler JSON output, create the list of regions that
+  // "!cfg" left out of the build, for the editor to grey out.
+  fun parseInactive(output: String, toIde: (String) -> String = { it }): List<SppInactiveRegion> =
+    objectsIn(output, "inactive").mapNotNull { obj ->
+      SppInactiveRegion(where = toSpan(obj["where"], toIde) ?: return@mapNotNull null)
     }
 
   // From compiler JSON output, create the list of scopes that

@@ -10,6 +10,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.ModificationTracker
 import com.intellij.psi.util.PsiModificationTracker
 import java.nio.file.Path
 import com.intellij.openapi.vfs.VirtualFile
@@ -31,6 +32,7 @@ data class SppAnalysis(
   val signatures: Map<String, List<SppSignature>>,
   val scopes: Map<String, List<SppScope>>,
   val comptimeValues: Map<String, List<SppComptimeValue>>,
+  val inactive: Map<String, List<SppInactiveRegion>>,
 )
 
 // The service that runs the s++ compiler for its diagnostics,
@@ -39,14 +41,14 @@ data class SppAnalysis(
 // the slow, but only way, to get the information the editor
 // needs to show errors and offer navigation.
 @Service(Service.Level.PROJECT)
-class SppCompilerDiagnostics(private val project: Project) {
+class SppCompilerDiagnostics(private val project: Project) : ModificationTracker {
 
   private val lock = ReentrantLock()
 
   /// Volatile, like the symbols below, because the gutter reads
   // it while a run may be holding the lock.
   @Volatile
-  private var cached: SppAnalysis = SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
+  private var cached: SppAnalysis = EMPTY
   private var cachedStamp: Long = -1
   private var cachedKey: String? = null
   private var lastRunAt: Long = 0
@@ -81,6 +83,12 @@ class SppCompilerDiagnostics(private val project: Project) {
   @Volatile
   private var valuesByFile: Map<String, List<SppComptimeValue>> = emptyMap()
 
+  // What "!cfg" left out of each file, for the annotator to grey
+  // out. Replaced rather than accumulated for every file a run
+  // indexed, so a condition since removed stops greying.
+  @Volatile
+  private var inactiveByFile: Map<String, List<SppInactiveRegion>> = emptyMap()
+
   // The files the project tree underlines, with their folders,
   // for holding an error.
   private val problemFiles = SppProblemFiles(project)
@@ -98,6 +106,13 @@ class SppCompilerDiagnostics(private val project: Project) {
   // so that "nothing found yet" is visibly temporary.
   @Volatile
   private var analysing = false
+
+  // Moved on whenever a run's answers land, so what is worked out
+  // from them (the greyed code) is worked out again.
+  @Volatile
+  private var generation = 0L
+
+  override fun getModificationCount(): Long = generation
 
   // Every diagnostic the project has, by the file it points
   // at. Returns the previous answer when nothing has changed
@@ -134,7 +149,14 @@ class SppCompilerDiagnostics(private val project: Project) {
       signaturesByFile = signaturesByFile + cached.signatures
       scopesByFile = scopesByFile + cached.scopes
       valuesByFile = valuesByFile + cached.comptimeValues
+
+      // Every indexed file has a scope covering it, so the files a
+      // run looked at are those, whether or not "!cfg" left anything
+      // out of them.
+      val indexed = cached.scopes.keys + listOfNotNull(indexFile?.toString())
+      inactiveByFile = inactiveByFile + indexed.associateWith { cached.inactive[it].orEmpty() } + cached.inactive
       problemFiles.update(cached.diagnostics)
+      generation++
       cachedStamp = stamp
       cachedKey = key
       lastRunAt = System.currentTimeMillis()
@@ -170,6 +192,10 @@ class SppCompilerDiagnostics(private val project: Project) {
   // [file], for the line painter to use. Used for showing the
   // answer beside the declaration.
   fun cachedComptimeValuesFor(file: Path): List<SppComptimeValue> = valuesByFile[file.toString()].orEmpty()
+
+  // Get the regions "!cfg" left out of [file] in the last run
+  // that indexed it, for the annotator to grey out.
+  fun cachedInactiveFor(file: Path): List<SppInactiveRegion> = inactiveByFile[file.toString()].orEmpty()
 
   // Whether a compilation is running right now, whatever it was
   // asked about.
@@ -294,7 +320,8 @@ class SppCompilerDiagnostics(private val project: Project) {
     val signatures = SppDiagnosticParser.parseSignatures(output.stdout, toIde).groupBy { it.arguments.file }
     val scopes = SppDiagnosticParser.parseScopes(output.stdout, toIde).groupBy { it.where.file }
     val values = SppDiagnosticParser.parseComptimeValues(output.stdout, toIde).groupBy { it.where.file }
-    return SppAnalysis(diagnostics, symbols, members, signatures, scopes, values)
+    val inactive = SppDiagnosticParser.parseInactive(output.stdout, toIde).groupBy { it.where.file }
+    return SppAnalysis(diagnostics, symbols, members, signatures, scopes, values, inactive)
   }
 
   // Say once that analysis is failing, rather than on every one
@@ -312,7 +339,7 @@ class SppCompilerDiagnostics(private val project: Project) {
   companion object {
     private const val MIN_INTERVAL_MS = 2_000L
     private const val TIMEOUT_MS = 120_000
-    private val EMPTY = SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
+    private val EMPTY = SppAnalysis(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap())
 
     fun getInstance(project: Project): SppCompilerDiagnostics = project.getService(SppCompilerDiagnostics::class.java)
 

@@ -147,7 +147,7 @@ object SppSymbolLookup {
 
   // A region that may cross lines, as a pair of offsets;
   // null when it falls outside the document.
-  private fun regionOf(span: SppSpan, document: Document): Pair<Int, Int>? {
+  fun regionOf(span: SppSpan, document: Document): Pair<Int, Int>? {
     if (span.generated || span.startLine < 0 || span.startLine >= document.lineCount) return null
     if (span.endLine < span.startLine || span.endLine >= document.lineCount) return null
     val start = (document.getLineStartOffset(span.startLine) + span.startCharacter)

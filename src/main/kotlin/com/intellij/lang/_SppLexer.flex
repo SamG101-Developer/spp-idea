@@ -66,7 +66,6 @@ LEXEME_DOUBLE_QUOTE_STR=b?\"[^\"\r\n]*\"
   ";"                             { return TOKEN_SEMICOLON; }
   "'"                             { return TOKEN_SINGLE_QUOTE; }
   "\""                            { return TOKEN_DOUBLE_QUOTE; }
-  "$"                             { return TOKEN_DOLLAR; }
   "->"                            { return TOKEN_ARROW_RIGHT; }
   ".."                            { return TOKEN_DOUBLE_DOT; }
   "::"                            { return TOKEN_DOUBLE_COLON; }

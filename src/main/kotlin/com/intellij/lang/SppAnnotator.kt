@@ -1,5 +1,6 @@
 package com.intellij.lang
 
+import com.github.samg101developer.sppidea.diagnostics.SppGreyedCode
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
@@ -17,6 +18,13 @@ import com.intellij.psi.PsiWhiteSpace
 // method being called, etc.
 class SppAnnotator : Annotator {
   override fun annotate(element: PsiElement, holder: AnnotationHolder) {
+    // Code the compiler never analysed (after an error, or left out
+    // by "!cfg") is greyed whole by the external annotator. Colour
+    // added here shares its layer and can be drawn over it, so none
+    // is added.
+    val file = element.containingFile
+    if (file != null && SppGreyedCode.covers(file, element.textRange)) return
+
     // Match element type against SppConvention, SppIdentifier
     // etc.
     val parent = element.parent

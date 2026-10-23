@@ -2,20 +2,17 @@ package com.github.samg101developer.sppidea.diagnostics
 
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
 import com.intellij.lang.SppSyntaxHighlighter
-import com.intellij.lang.psi.SppCoroutinePrototype
-import com.intellij.lang.psi.SppSubroutinePrototype
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.ExternalAnnotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.openapi.util.text.StringUtil
 import java.nio.file.Path
 import kotlin.io.path.absolute
@@ -75,19 +72,6 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
     val document = file.viewProvider.document ?: return
     val path = file.virtualFile?.toNioPathOrNullSafely()?.toString() ?: return
 
-    // Every line an error points at in this file, the explanations
-    // included: those stay readable even when they sit in code the
-    // error stopped analysis of.
-    val labelled = diagnostics.asSequence()
-      .flatMap { it.labels }
-      .filter { !it.generated && it.file == path }
-      .flatMap { it.startLine..maxOf(it.startLine, it.endLine) }
-      .toSet()
-
-    // The functions an error stopped in, each dimmed once however
-    // many errors it holds.
-    val failed = linkedSetOf<PsiElement>()
-
     for (diagnostic in diagnostics) {
       for (label in diagnostic.labels) {
         if (label.generated || label.file != path) continue
@@ -101,7 +85,6 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
             .range(range)
             .tooltip(diagnostic.tooltip(label))
             .create()
-          functionAround(file.findElementAt(range.startOffset))?.let { failed += it }
         }
         // The places that explain the error, on the code they point
         // at. They are not themselves errors, so they are reported
@@ -115,19 +98,29 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
       }
     }
 
-    // Dim all the lines that are not errors, if any errors are
-    // present, and invoke the cmp highlighting, which is separate
-    // from the error reporting.
-    failed.forEach { dimWhatWasNeverReached(it, holder, document, labelled) }
-    colourCmpUses(file, holder, document, failed)
+    // Grey what the compiler never analysed: the rest of a function
+    // an error stopped in, and what "!cfg" left out of the build.
+    // Then the cmp highlighting, which is separate from the errors.
+    val greyed = SppGreyedCode.of(file)
+    greyed.unreached.forEach { grey(it, SppSyntaxHighlighter.UNREACHED_CODE, holder) }
+    greyed.inactive.forEach { grey(it, SppSyntaxHighlighter.INACTIVE_CODE, holder) }
+    colourCmpUses(file, holder, document, greyed.all)
+  }
+
+  // Grey one range. The annotators add no colour inside it, as
+  // theirs share its highlighter layer and could be drawn over it.
+  private fun grey(range: TextRange, key: TextAttributesKey, holder: AnnotationHolder) {
+    holder.newSilentAnnotation(HighlightSeverity.TEXT_ATTRIBUTES)
+      .range(range)
+      .textAttributes(key)
+      .create()
   }
 
   // Add the "cmp" colouring to the uses of the constants and
   // generics the compiler resolved in this file, but not inside
-  // a function an error stopped in, which is dimmed instead.
-  private fun colourCmpUses(file: PsiFile, holder: AnnotationHolder, document: Document, failed: Set<PsiElement>) {
+  // greyed code.
+  private fun colourCmpUses(file: PsiFile, holder: AnnotationHolder, document: Document, dimmed: List<TextRange>) {
     val path = file.virtualFile?.toNioPathOrNullSafely() ?: return
-    val dimmed = failed.map { it.textRange }
     SppCompilerDiagnostics.getInstance(file.project).cachedSymbolsFor(path)
       .filter { it.kind == "constant" || it.kind == "generic" }
       .mapNotNull { SppSymbolLookup.rangeOf(it.use, document) }
@@ -140,52 +133,6 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
           .create()
       }
   }
-}
-
-// Grey out lines that are not labelled, as they are irrelevant
-// to the error.
-private fun dimWhatWasNeverReached(
-  function: PsiElement, holder: AnnotationHolder, document: Document, labelled: Set<Int>,
-) {
-  // Extract the implementation of the function, for the first
-  // and last lines to dim. If the function is not a subroutine
-  // or coroutine, this is not a function so return.
-  val body = when (function) {
-    is SppSubroutinePrototype -> function.functionImplementation
-    is SppCoroutinePrototype -> function.functionImplementation
-    else -> null
-  } ?: return
-  val firstLine = document.getLineNumber(body.textRange.startOffset) + 1
-  val lastLine = document.getLineNumber(body.textRange.endOffset) - 1
-  if (firstLine > lastLine) return
-
-  // Dim each line that is not labelled, and don't include the {}
-  // tokens from the function's body.
-  var runStart = -1
-  for (line in firstLine..lastLine + 1) {
-    val dim = line <= lastLine && line !in labelled
-    if (dim && runStart < 0) runStart = line
-    if (!dim && runStart >= 0) {
-      val start = document.getLineStartOffset(runStart)
-      val end = document.getLineEndOffset(line - 1)
-      if (end > start) {
-        // "TEXT_ATTRIBUTES" is drawn on a layer above the colouring
-        // the other annotators add at "INFORMATION", which would
-        // otherwise win wherever both apply, and below the errors.
-        holder.newSilentAnnotation(HighlightSeverity.TEXT_ATTRIBUTES)
-          .range(TextRange(start, end))
-          .textAttributes(SppSyntaxHighlighter.UNREACHED_CODE)
-          .create()
-      }
-      runStart = -1
-    }
-  }
-}
-
-// The function a position sits in, which is as far as the
-// recovery threw away.
-private fun functionAround(element: PsiElement?): PsiElement? = PsiTreeUtil.findFirstParent(element) {
-  it is SppSubroutinePrototype || it is SppCoroutinePrototype
 }
 
 // The label's place in [document], or null when it falls
@@ -232,5 +179,5 @@ private fun escape(text: String): String =
 
 // The file's path, or null when it has none the compiler
 // could read.
-private fun com.intellij.openapi.vfs.VirtualFile.toNioPathOrNullSafely(): Path? =
+internal fun com.intellij.openapi.vfs.VirtualFile.toNioPathOrNullSafely(): Path? =
   runCatching { toNioPath().absolute() }.getOrNull()
