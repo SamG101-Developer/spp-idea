@@ -30,6 +30,7 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
     val project = source.project
     val doc = PsiDocumentManager.getInstance(project).getDocument(source) ?: return rangeToReformat
     val rightMargin = settings.getRightMargin(SppLanguage.INSTANCE)
+    val tabSize = settings.getLanguageIndentOptions(SppLanguage.INSTANCE).TAB_SIZE
 
     ApplicationManager.getApplication().invokeLater {
       if (project.isDisposed) return@invokeLater
@@ -47,7 +48,7 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
         for (impl in collectImpls(file)) {
           val comments = collectDocstringComments(impl)
           if (comments.isEmpty()) continue
-          reflowCommentGroup(comments, doc, rightMargin)?.let { replacements += it }
+          reflowCommentGroup(comments, doc, rightMargin, tabSize)?.let { replacements += it }
         }
 
         // Apply in reverse order so earlier offsets aren't
@@ -94,6 +95,7 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
     comments: List<PsiComment>,
     doc: Document,
     rightMargin: Int,
+    tabSize: Int,
   ): Pair<TextRange, String>? {
     // Split the multiple docstring paragraphs into their lines,
     // defined by the offset within the document.
@@ -102,25 +104,7 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
       doc.getText(TextRange(doc.getLineStartOffset(ln), doc.getLineEndOffset(ln)))
     }
 
-    // Get the indentation, to confirm that there is space between
-    // the indent and the right margin (hard wrap), allowing
-    // the maximum length to be calculated.
-    val indent = lines.first().takeWhile { it == ' ' || it == '\t' }
-    val available = rightMargin - indent.length - 2  // 2 = "# "
-    if (available <= 0) return null
-
-    // Re-paragraph the docstring by splitting the group into its
-    // paragraphs and then handling the paragraphs internally.
-    val reflowed = splitIntoParagraphs(lines, indent).flatMap { para ->
-      val firstContent = extractContent(para.first(), indent)
-      when {
-        isBlank(para.first(), indent) -> para
-        firstContent.trimStart().startsWith("```") -> para // verbatim code block
-        else -> reflowParagraph(para, indent, available)
-      }
-    }
-
-    if (reflowed == lines) return null
+    val reflowed = reflowLines(lines, rightMargin, tabSize) ?: return null
 
     // Rejoin the reflowed docstring, and return it all.
     val firstLn = doc.getLineNumber(comments.first().textRange.startOffset)
@@ -129,129 +113,173 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
     return range to reflowed.joinToString("\n")
   }
 
-  // Split lines into paragraphs, by using a comment line
-  // containing only "#" as a separator of paragraphs in the
-  // docstring.
-  private fun splitIntoParagraphs(lines: List<String>, indent: String): List<List<String>> {
-    val result = mutableListOf<MutableList<String>>()
-    var current = mutableListOf<String>()
-    var inCodeBlock = false
+  internal companion object {
 
-    for (line in lines) {
-      val content = extractContent(line, indent)
+    // Reflow a docstring's comment lines (each one "<indent># text")
+    // to the right margin. Returns null when nothing changes, or
+    // when the indent leaves no room before the margin. Lines of a
+    // paragraph that starts with a tag (e.g. "@let") are indented
+    // by tabSize when wrapped, up to the next tag, blank line, list
+    // item or code fence.
+    fun reflowLines(lines: List<String>, rightMargin: Int, tabSize: Int): List<String>? {
+      if (lines.isEmpty()) return null
 
-      // Code-fence toggle: ``` opens or closes a verbatim block.
-      if (content.trimStart().startsWith("```")) {
-        if (!inCodeBlock) {
-          // Opening fence: flush any current text paragraph, begin
-          // verbatim.
-          if (current.isNotEmpty()) {
+      // Get the indentation, to confirm that there is space between
+      // the indent and the right margin (hard wrap), allowing
+      // the maximum length to be calculated.
+      val indent = lines.first().takeWhile { it == ' ' || it == '\t' }
+      val available = rightMargin - indent.length - 2  // 2 = "# "
+      if (available <= 0) return null
+
+      // Re-paragraph the docstring by splitting the group into its
+      // paragraphs and then handling the paragraphs internally.
+      val reflowed = splitIntoParagraphs(lines, indent).flatMap { para ->
+        val firstContent = extractContent(para.first(), indent)
+        when {
+          isBlank(para.first(), indent) -> para
+          firstContent.trimStart().startsWith("```") -> para // verbatim code block
+          else -> {
+            // Tag paragraphs get a hanging indent, as long as it
+            // still leaves room for text on the wrapped lines.
+            val hanging = if (firstContent.startsWith("@") && available - tabSize > 0) tabSize.coerceAtLeast(0) else 0
+            reflowParagraph(para, indent, available, hanging)
+          }
+        }
+      }
+
+      return if (reflowed == lines) null else reflowed
+    }
+
+    // Split lines into paragraphs, by using a comment line
+    // containing only "#" as a separator of paragraphs in the
+    // docstring.
+    private fun splitIntoParagraphs(lines: List<String>, indent: String): List<List<String>> {
+      val result = mutableListOf<MutableList<String>>()
+      var current = mutableListOf<String>()
+      var inCodeBlock = false
+
+      for (line in lines) {
+        val content = extractContent(line, indent)
+
+        // Code-fence toggle: ``` opens or closes a verbatim block.
+        if (content.trimStart().startsWith("```")) {
+          if (!inCodeBlock) {
+            // Opening fence: flush any current text paragraph, begin
+            // verbatim.
+            if (current.isNotEmpty()) {
+              result += current; current = mutableListOf()
+            }
+            inCodeBlock = true
+          } else {
+            inCodeBlock = false
+          }
+          current += line
+          // Closing fence: flush the verbatim paragraph immediately.
+          if (!inCodeBlock) {
             result += current; current = mutableListOf()
           }
-          inCodeBlock = true
+          continue
+        }
+
+        // Inside a code block: accumulate verbatim, no paragraph
+        // logic.
+        if (inCodeBlock) {
+          current += line; continue
+        }
+
+        when {
+          content.isEmpty() -> {
+            if (current.isNotEmpty()) {
+              result += current; current = mutableListOf()
+            }
+            result += mutableListOf(line)
+          }
+
+          // Todo: what was the thought behind @ being used as a
+          // paragraph separator? IIRC it is to do with tags.
+          content.startsWith("@") -> {
+            if (current.isNotEmpty()) {
+              result += current; current = mutableListOf()
+            }
+            current = mutableListOf(line)
+          }
+
+          // Each list item (bullet or numbered) is its own standalone
+          // paragraph so the reflow algorithm never joins multiple
+          // items into one line.
+          content.startsWith("- ")
+              || content.startsWith("* ")
+              || NUMBERED_ITEM_RE.containsMatchIn(content) -> {
+            if (current.isNotEmpty()) {
+              result += current; current = mutableListOf()
+            }
+            result += mutableListOf(line)
+          }
+
+          else -> current += line
+        }
+      }
+
+      if (current.isNotEmpty()) result += current
+      return result
+    }
+
+    // Join the paragraph's text content, then re-wrap at the margin
+    // (specified by "available").
+    // The first line gets the full width; wrapped lines are
+    // prefixed with "hanging" extra spaces after the "# ".
+    private fun reflowParagraph(lines: List<String>, indent: String, available: Int, hanging: Int): List<String> {
+      val content = lines.joinToString(" ") { extractContent(it, indent).trim() }.trim()
+      if (content.isEmpty()) return lines
+
+      val result = mutableListOf<String>()
+      var remaining = content
+      while (remaining.isNotEmpty()) {
+        val isFirst = result.isEmpty()
+        val prefix = if (isFirst) "$indent# " else "$indent# " + " ".repeat(hanging)
+        val width = if (isFirst) available else available - hanging
+
+        // When there is not enough docstring left to ever wrap,
+        // append it on the new line and break from the loop.
+        if (remaining.length <= width) {
+          result += "$prefix$remaining"
+          break
+        }
+
+        // No space within limit => force-break at the column, but
+        // never inside a "[name]" reference, which is kept whole on
+        // the line it starts on.
+        val breakAt = remaining.lastIndexOf(' ', width)
+        if (breakAt <= 0) {
+          val cut = SppDocstringRefs.findIn(remaining)
+            .firstOrNull { width > it.range.first && width <= it.range.last }
+            ?.let { it.range.last + 1 }
+            ?: width
+          result += "$prefix${remaining.substring(0, cut)}"
+          remaining = remaining.substring(cut).trimStart()
+
+        // Break at the last space within the available limit.
         } else {
-          inCodeBlock = false
+          result += "$prefix${remaining.substring(0, breakAt)}"
+          remaining = remaining.substring(breakAt + 1)
         }
-        current += line
-        // Closing fence: flush the verbatim paragraph immediately.
-        if (!inCodeBlock) {
-          result += current; current = mutableListOf()
-        }
-        continue
       }
 
-      // Inside a code block: accumulate verbatim, no paragraph
-      // logic.
-      if (inCodeBlock) {
-        current += line; continue
-      }
-
-      when {
-        content.isEmpty() -> {
-          if (current.isNotEmpty()) {
-            result += current; current = mutableListOf()
-          }
-          result += mutableListOf(line)
-        }
-
-        // Todo: what was the thought behind @ being used as a
-        // paragraph separator? IIRC it is to do with tags.
-        content.startsWith("@") -> {
-          if (current.isNotEmpty()) {
-            result += current; current = mutableListOf()
-          }
-          current = mutableListOf(line)
-        }
-
-        // Each list item (bullet or numbered) is its own standalone
-        // paragraph so the reflow algorithm never joins multiple
-        // items into one line.
-        content.startsWith("- ")
-            || content.startsWith("* ")
-            || NUMBERED_ITEM_RE.containsMatchIn(content) -> {
-          if (current.isNotEmpty()) {
-            result += current; current = mutableListOf()
-          }
-          result += mutableListOf(line)
-        }
-
-        else -> current += line
-      }
+      // Return the concatenated content.
+      return result
     }
 
-    if (current.isNotEmpty()) result += current
-    return result
-  }
-
-  // Join the paragraph's text content, then re-wrap at the margin
-  // (specified by "available").
-  private fun reflowParagraph(lines: List<String>, indent: String, available: Int): List<String> {
-    val content = lines.joinToString(" ") { extractContent(it, indent) }.trim()
-    if (content.isEmpty()) return lines
-
-    val result = mutableListOf<String>()
-    var remaining = content
-    while (remaining.isNotEmpty()) {
-      // When there is not enough docstring left to ever wrap,
-      // append it on the new line and break from the loop.
-      if (remaining.length <= available) {
-        result += "$indent# $remaining"
-        break
-      }
-
-      // No space within limit => force-break at the column, but
-      // never inside a "[name]" reference, which is kept whole on
-      // the line it starts on.
-      val breakAt = remaining.lastIndexOf(' ', available)
-      if (breakAt <= 0) {
-        val cut = SppDocstringRefs.findIn(remaining)
-          .firstOrNull { available > it.range.first && available <= it.range.last }
-          ?.let { it.range.last + 1 }
-          ?: available
-        result += "$indent# ${remaining.substring(0, cut)}"
-        remaining = remaining.substring(cut).trimStart()
-
-      // Break at the last space within the available limit.
-      } else {
-        result += "$indent# ${remaining.substring(0, breakAt)}"
-        remaining = remaining.substring(breakAt + 1)
-      }
+    // Text content of a comment line: strip leading whitespace +
+    // `#` + optional single space.
+    private fun extractContent(line: String, indent: String): String {
+      val afterIndent = line.removePrefix(indent)
+      val afterHash = afterIndent.removePrefix("#")
+      return if (afterHash.startsWith(" ")) afterHash.substring(1).trimEnd() else afterHash.trimEnd()
     }
 
-    // Return the concatenated content.
-    return result
+    // Check if a line is blank, ignoring indentation and the
+    // leading `#`.
+    private fun isBlank(line: String, indent: String): Boolean =
+      line.removePrefix(indent).removePrefix("#").isBlank()
   }
-
-  // Text content of a comment line: strip leading whitespace +
-  // `#` + optional single space.
-  private fun extractContent(line: String, indent: String): String {
-    val afterIndent = line.removePrefix(indent)
-    val afterHash = afterIndent.removePrefix("#")
-    return if (afterHash.startsWith(" ")) afterHash.substring(1).trimEnd() else afterHash.trimEnd()
-  }
-
-  // Check if a line is blank, ignoring indentation and the
-  // leading `#`.
-  private fun isBlank(line: String, indent: String): Boolean =
-    line.removePrefix(indent).removePrefix("#").isBlank()
 }
