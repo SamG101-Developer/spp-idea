@@ -246,10 +246,10 @@ class SppDocumentationProvider : AbstractDocumentationProvider() {
       val full = if (conts.isBlank()) rest else "$rest $conts".trim()
 
       when (tag) {
-        "let" -> params += nameAndDesc(full)
-        "type" -> types += nameAndDesc(full)
-        "cmp" -> cmps += nameAndDesc(full)
-        "ret" -> ret = renderInline(full.removePrefix(":").trimStart())
+        SppDocstringTags.LET -> params += nameAndDesc(full)
+        SppDocstringTags.TYPE -> types += nameAndDesc(full)
+        SppDocstringTags.CMP -> cmps += nameAndDesc(full)
+        SppDocstringTags.RET -> ret = renderInline(full.removePrefix(":").trimStart())
       }
     }
 
