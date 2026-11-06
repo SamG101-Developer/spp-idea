@@ -13,7 +13,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
-import com.intellij.openapi.util.text.StringUtil
+import com.intellij.openapi.vfs.LocalFileSystem
 import java.nio.file.Path
 import kotlin.io.path.absolute
 
@@ -72,6 +72,14 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
     val document = file.viewProvider.document ?: return
     val path = file.virtualFile?.toNioPathOrNullSafely()?.toString() ?: return
 
+    // Where a label is, as an offset in its file, for the links
+    // in the tooltip. Labels in other files read that file's
+    // document (opening it if needed).
+    val offsetOf = { label: SppLabel ->
+      val labelDocument = if (label.file == path) document else documentFor(label.file)
+      labelDocument?.let { label.rangeIn(it)?.startOffset }
+    }
+
     for (diagnostic in diagnostics) {
       for (label in diagnostic.labels) {
         if (label.generated || label.file != path) continue
@@ -81,9 +89,9 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
         // highlighted as an error and has a tooltip with all the
         // context.
         if (label.primary) {
-          holder.newAnnotation(HighlightSeverity.ERROR, "${diagnostic.code}: ${label.message}")
+          holder.newAnnotation(HighlightSeverity.ERROR, SppDiagnosticTooltip.description(diagnostic, label))
             .range(range)
-            .tooltip(diagnostic.tooltip(label))
+            .tooltip(SppDiagnosticTooltip.render(diagnostic, label, path, offsetOf))
             .create()
         }
         // The places that explain the error, on the code they point
@@ -92,7 +100,7 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
         else {
           holder.newAnnotation(HighlightSeverity.INFORMATION, label.message)
             .range(range)
-            .tooltip(diagnostic.tooltip(label))
+            .tooltip(SppDiagnosticTooltip.render(diagnostic, label, path, offsetOf))
             .create()
         }
       }
@@ -155,27 +163,10 @@ private fun SppLabel.rangeIn(document: Document): TextRange? {
     TextRange(start, (start + 1).coerceAtMost(document.textLength))
 }
 
-// The error as HTML: what it says here, then what it says
-// everywhere else, then the note and the help. This is for
-// the tooltip.
-private fun SppDiagnostic.tooltip(current: SppLabel): String {
-  val parts = mutableListOf<String>()
-  parts += "<b>${escape(code)}: ${escape(title)}</b>"
-  parts += escape(current.message)
-
-  labels.filter { it !== current && !it.generated }.forEach {
-    val where = "${it.file.substringAfterLast('/')}:${it.startLine + 1}"
-    parts += "<i>${escape(it.message)}</i> &mdash; $where"
-  }
-
-  if (note.isNotBlank()) parts += "<i>${escape(note)}</i>"
-  if (help.isNotBlank()) parts += "<i>${escape(help)}</i>"
-  return parts.joinToString("<br/>")
-}
-
-// Escape the text for HTML, so it is not interpreted as HTML.
-private fun escape(text: String): String =
-  StringUtil.escapeXmlEntities(text)
+// The document for a file on disk, or null when it can't be
+// found or read.
+private fun documentFor(path: String): Document? =
+  LocalFileSystem.getInstance().findFileByPath(path)?.let { FileDocumentManager.getInstance().getDocument(it) }
 
 // The file's path, or null when it has none the compiler
 // could read.

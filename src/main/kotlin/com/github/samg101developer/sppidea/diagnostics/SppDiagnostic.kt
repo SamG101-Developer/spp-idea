@@ -100,6 +100,10 @@ data class SppDiagnostic(
   val labels: List<SppLabel>,
   val note: String,
   val help: String,
+  // The full text of any error this one caught and re-raised,
+  // e.g. the real error inside generated code. It is the
+  // compiler's terminal rendering, so it is shown verbatim.
+  val wrapped: List<String> = emptyList(),
 ) {
   val primaryLabel: SppLabel? get() = labels.firstOrNull { it.primary }
 }
@@ -241,6 +245,7 @@ object SppDiagnosticParser {
       labels = labels,
       note = obj["note"] as? String ?: "",
       help = obj["help"] as? String ?: "",
+      wrapped = (obj["wrapped"] as? List<*>).orEmpty().filterIsInstance<String>().filter { it.isNotBlank() },
     )
   }
 
