@@ -6,7 +6,8 @@ import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
 // The default style provider for S++ code style settings,
 // providing defaults for indentation and tab size. The S++
 // style defaults to 2 spaces for indentation, 4 spaces for
-// continuation indentation, and 2 spaces for tab size.
+// continuation indentation, 2 spaces for tab size, and an
+// 80-column hard-wrap limit (right margin).
 class SppCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
   override fun getLanguage() = SppLanguage.INSTANCE
 
@@ -19,6 +20,7 @@ class SppCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     indentOptions.INDENT_SIZE = 2
     indentOptions.CONTINUATION_INDENT_SIZE = 4
     indentOptions.TAB_SIZE = 2
+    commonSettings.RIGHT_MARGIN = 80
   }
 
   // The code sample to show in the settings dialog.

@@ -65,6 +65,8 @@
         implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
     <enterHandlerDelegate
         implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
+    <enterHandlerDelegate
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppOverrideEnterHandler"/>
     <postFormatProcessor
         implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
     <postFormatProcessor
@@ -96,6 +98,8 @@
         implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
     <configurationType
         implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+    <internalFileTemplate
+        name="S++ File"/>
   </extensions>
 
   <projectListeners>
@@ -111,6 +115,11 @@
       <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
       <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
       <add-to-group group-id="RunMenu" anchor="first"/>
+    </action>
+    <action
+        id="Spp.NewFile" class="com.github.samg101developer.sppidea.module.SppCreateFileAction" text="S++ File"
+        description="Create a new S++ file" icon="/icons/logo-tiny.svg">
+      <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
     </action>
   </actions>
 </idea-plugin>

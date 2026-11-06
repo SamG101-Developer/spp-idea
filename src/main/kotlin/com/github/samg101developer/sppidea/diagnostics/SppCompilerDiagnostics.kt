@@ -33,6 +33,7 @@ data class SppAnalysis(
   val scopes: Map<String, List<SppScope>>,
   val comptimeValues: Map<String, List<SppComptimeValue>>,
   val inactive: Map<String, List<SppInactiveRegion>>,
+  val overridables: Map<String, List<SppOverridableList>> = emptyMap(),
 )
 
 // The service that runs the s++ compiler for its diagnostics,
@@ -88,6 +89,16 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
   // indexed, so a condition since removed stops greying.
   @Volatile
   private var inactiveByFile: Map<String, List<SppInactiveRegion>> = emptyMap()
+
+  // What each "sup ext" block in each file could still override,
+  // for completion inside the block. Replaced for every file a
+  // run indexed, like the greyed regions, so a method written
+  // since stops being offered.
+  @Volatile
+  private var overridablesByFile: Map<String, List<SppOverridableList>> = emptyMap()
+
+  // Asked to run once the next run's answers land, then dropped.
+  private val afterNextRun = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
   // The files the project tree underlines, with their folders,
   // for holding an error.
@@ -155,6 +166,8 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
       // out of them.
       val indexed = cached.scopes.keys + listOfNotNull(indexFile?.toString())
       inactiveByFile = inactiveByFile + indexed.associateWith { cached.inactive[it].orEmpty() } + cached.inactive
+      overridablesByFile = overridablesByFile +
+        indexed.associateWith { cached.overridables[it].orEmpty() } + cached.overridables
       problemFiles.update(cached.diagnostics)
       generation++
       cachedStamp = stamp
@@ -166,8 +179,54 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
       // - was worked out before this run finished, so ask for it
       // to be worked out again.
       refreshEditor()
+      runAfterNextRun()
       return cached
     }
+  }
+
+  // Run [callback] once the next run's answers have landed (on
+  // the thread that ran it), whatever file it was for.
+  fun whenNextRunLands(callback: () -> Unit) {
+    afterNextRun += callback
+  }
+
+  // Run each callback waiting on a run, once.
+  private fun runAfterNextRun() {
+    val waiting = afterNextRun.toList()
+    afterNextRun.removeAll(waiting.toSet())
+    waiting.forEach { runCatching(it).onFailure { e -> thisLogger().warn("After-run callback failed", e) } }
+  }
+
+  // Analyse again now that [file] has changed, rather than when
+  // the editor next asks: what was just typed is saved, and a
+  // run started (after the minimum gap between runs) so that it
+  // is in the answers. Used where something is waiting for them.
+  fun reanalyse(file: VirtualFile) {
+    val path = runCatching { file.toNioPath().absolute() }.getOrNull() ?: return
+    val root = projectRootFor(path) ?: return
+    val executable = resolveSppExecutable() ?: return
+    val target = if (isProjectFile(root, path)) null else path
+
+    ApplicationManager.getApplication().executeOnPooledThread {
+      ApplicationManager.getApplication().invokeAndWait {
+        com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().saveAllDocuments()
+      }
+      val wait = MIN_INTERVAL_MS - (System.currentTimeMillis() - lastRunAt)
+      if (wait > 0) Thread.sleep(wait)
+      analyse(root, executable, target)
+    }
+  }
+
+  // What each "sup ext" block in [file] could still override,
+  // as of the last run that indexed it.
+  fun cachedOverridablesFor(file: Path): List<SppOverridableList> = overridablesByFile[file.toString()].orEmpty()
+
+  // Stand in for a run's answer about what [file]'s "sup ext"
+  // blocks can override, so completion can be tested without a
+  // compiler.
+  @org.jetbrains.annotations.TestOnly
+  internal fun seedOverridables(file: Path, lists: List<SppOverridableList>) {
+    overridablesByFile = overridablesByFile + (file.toString() to lists)
   }
 
   // Get all the names the last run worked out for [file], for
@@ -321,7 +380,8 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
     val scopes = SppDiagnosticParser.parseScopes(output.stdout, toIde).groupBy { it.where.file }
     val values = SppDiagnosticParser.parseComptimeValues(output.stdout, toIde).groupBy { it.where.file }
     val inactive = SppDiagnosticParser.parseInactive(output.stdout, toIde).groupBy { it.where.file }
-    return SppAnalysis(diagnostics, symbols, members, signatures, scopes, values, inactive)
+    val overridables = SppDiagnosticParser.parseOverridables(output.stdout, toIde).groupBy { it.where.file }
+    return SppAnalysis(diagnostics, symbols, members, signatures, scopes, values, inactive, overridables)
   }
 
   // Say once that analysis is failing, rather than on every one
