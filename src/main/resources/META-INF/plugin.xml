@@ -65,6 +65,8 @@
         implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
     <enterHandlerDelegate
         implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
+    <enterHandlerDelegate
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppOverrideEnterHandler"/>
     <postFormatProcessor
         implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
     <postFormatProcessor
