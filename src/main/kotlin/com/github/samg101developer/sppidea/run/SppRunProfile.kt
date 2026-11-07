@@ -2,9 +2,11 @@ package com.github.samg101developer.sppidea.run
 
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
 import com.intellij.execution.ExecutionException
+import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.RunConfiguration
+import com.intellij.execution.configurations.TargetAwareRunProfile
 import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
@@ -19,12 +21,15 @@ import kotlin.io.path.listDirectoryEntries
 // An S++ run configuration, whatever class implements it: the
 // plain SppRunConfiguration, or the CLion one in the "clion"
 // module, which has to extend CLion's own base class. The
-// build action, the editor and the runner only use this.
-interface SppRunProfile : RunConfiguration {
+// build action, the editor and the runner only use this. Its
+// execution targets are the build modes (SppModeTarget).
+interface SppRunProfile : RunConfiguration, TargetAwareRunProfile {
   val kind: SppConfigurationKind
   var modulesPath: String?
   var moduleName: String?
   var programArguments: String?
+
+  override fun canRunOn(target: ExecutionTarget): Boolean = target is SppModeTarget && target.canRun(this)
 }
 
 // Creates the run configuration for an S++ factory. Without
@@ -115,10 +120,12 @@ object SppRunSupport {
     val workingDir = resolveWorkingDirectory(profile)
       ?: throw ExecutionException("No module selected for this run configuration.")
 
+    val mode = SppModeTarget.modeFor(profile, environment.executionTarget)
+
     return object : CommandLineState(environment) {
       override fun startProcess(): ProcessHandler {
         val handler = startSppProcess(
-          sppCommandLine(sppPath, profile.kind.runCommand, workingDir, profile.programArguments)
+          sppCommandLine(sppPath, profile.kind.runCommand, workingDir, profile.programArguments, mode)
         )
         ProcessTerminatedListener.attach(handler)
         return handler

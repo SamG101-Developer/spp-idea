@@ -85,6 +85,9 @@ class SppCidrRunConfiguration(
   // ones are named after the module, as in other IDEs.
   override fun suggestedName(): String? = SppRunSupport.suggestedName(this)
 
+  // Runs only on the build modes it supports (SppModeTarget).
+  override fun canRunOn(target: ExecutionTarget): Boolean = super<SppRunProfile>.canRunOn(target)
+
   override fun checkConfiguration() = SppRunSupport.checkConfiguration(this)
 
   override fun getState(executor: Executor, environment: ExecutionEnvironment): CommandLineState =

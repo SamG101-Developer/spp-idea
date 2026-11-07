@@ -57,7 +57,8 @@ object SppBuildLauncher {
   private fun start(project: Project, configuration: SppRunProfile, sppPath: String, workingDir: String) {
     // Create the command line and start the process. If it fails
     // to start, report it as a notification.
-    val commandLine = sppCommandLine(sppPath, SppCommand.BUILD, workingDir, configuration.programArguments)
+    val mode = SppModeTarget.modeFor(configuration, null)
+    val commandLine = sppCommandLine(sppPath, SppCommand.BUILD, workingDir, configuration.programArguments, mode)
     val handler = try {
       startSppProcess(commandLine)
     } catch (e: ExecutionException) {
@@ -68,7 +69,8 @@ object SppBuildLauncher {
     // which the exit code alone cannot distinguish: killing the
     // compiler also gives it a non-zero code.
     val cancelled = AtomicBoolean(false)
-    val buildDescriptor = DefaultBuildDescriptor(Any(), configuration.name, workingDir, System.currentTimeMillis())
+    val buildDescriptor =
+      DefaultBuildDescriptor(Any(), "${configuration.name} | ${mode.cliArg}", workingDir, System.currentTimeMillis())
       .withAction(StopBuildAction(handler, cancelled))
       .withRestartAction(RestartBuildAction(project, configuration, handler))
     buildDescriptor.isActivateToolWindowWhenAdded = true
@@ -77,7 +79,7 @@ object SppBuildLauncher {
     // process events to report them to the build console.
     val progress = BuildViewManager.createBuildProgress(project)
       .start(object : BuildProgressDescriptor {
-        override fun getTitle(): String = "Running 'spp build'…"
+        override fun getTitle(): String = "Running 'spp build --mode ${mode.cliArg}'…"
         override fun getBuildDescriptor(): BuildDescriptor = buildDescriptor
       })
 

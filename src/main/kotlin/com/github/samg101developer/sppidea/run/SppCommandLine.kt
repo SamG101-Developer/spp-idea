@@ -12,12 +12,14 @@ fun sppCommandLine(
   command: SppCommand,
   workingDir: String,
   arguments: String?,
+  mode: SppBuildMode,
 ): GeneralCommandLine {
   val commandLine = PtyCommandLine(GeneralCommandLine(sppPath))
     .withConsoleMode(false)
     .withInitialColumns(200)
     .withParameters(command.cliArg)
     .withWorkDirectory(workingDir)
+  commandLine.addParameters("--mode", mode.cliArg)
   arguments?.takeIf { it.isNotBlank() }?.let { commandLine.addParameters(ParametersListUtil.parse(it)) }
   return commandLine
 }

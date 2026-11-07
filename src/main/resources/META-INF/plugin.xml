@@ -98,6 +98,8 @@
         implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
     <configurationType
         implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+    <executionTargetProvider
+        implementation="com.github.samg101developer.sppidea.run.SppModeTargetProvider"/>
     <nonProjectFileWritingAccessExtension
         implementation="com.github.samg101developer.sppidea.module.SppReadOnlyFiles"/>
     <internalFileTemplate
@@ -114,7 +116,7 @@
     <action
         id="Spp.Build" class="com.github.samg101developer.sppidea.run.SppBuildAction" text="Build"
         description="Run 'spp build' for the selected S++ configuration" icon="AllIcons.Actions.Compile">
-      <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
+      <add-to-group group-id="RunToolbarMainActionGroup" anchor="after" relative-to-action="RedesignedRunConfigurationSelector"/>
       <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
       <add-to-group group-id="RunMenu" anchor="first"/>
     </action>
