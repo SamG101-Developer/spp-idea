@@ -118,9 +118,9 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
     // Reflow a docstring's comment lines (each one "<indent># text")
     // to the right margin. Returns null when nothing changes, or
     // when the indent leaves no room before the margin. Lines of a
-    // paragraph that starts with a tag (e.g. "@let") are indented
-    // by tabSize when wrapped, up to the next tag, blank line, list
-    // item or code fence.
+    // paragraph that starts with a tag (e.g. "@let") or a list item
+    // ("- ", "* ", "1. ") are indented by tabSize when wrapped, up to
+    // the next tag, list item, blank line or code fence.
     fun reflowLines(lines: List<String>, rightMargin: Int, tabSize: Int): List<String>? {
       if (lines.isEmpty()) return null
 
@@ -139,9 +139,11 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
           isBlank(para.first(), indent) -> para
           firstContent.trimStart().startsWith("```") -> para // verbatim code block
           else -> {
-            // Tag paragraphs get a hanging indent, as long as it
-            // still leaves room for text on the wrapped lines.
-            val hanging = if (firstContent.startsWith("@") && available - tabSize > 0) tabSize.coerceAtLeast(0) else 0
+            // Tag and list item paragraphs get a hanging indent, as
+            // long as it still leaves room for text on the wrapped
+            // lines.
+            val hanging =
+              if (startsHangingParagraph(firstContent) && available - tabSize > 0) tabSize.coerceAtLeast(0) else 0
             reflowParagraph(para, indent, available, hanging)
           }
         }
@@ -195,25 +197,16 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
             result += mutableListOf(line)
           }
 
-          // Todo: what was the thought behind @ being used as a
-          // paragraph separator? IIRC it is to do with tags.
-          content.startsWith("@") -> {
+          // A tag ("@let") or a list item ("- ", "* ", "1. ")
+          // starts a paragraph of its own, so it is never joined
+          // onto the line before. The lines after it, up to the
+          // next one of these, a blank line or a code fence, are
+          // its wrapped text and are joined onto it.
+          startsHangingParagraph(content) -> {
             if (current.isNotEmpty()) {
               result += current; current = mutableListOf()
             }
             current = mutableListOf(line)
-          }
-
-          // Each list item (bullet or numbered) is its own standalone
-          // paragraph so the reflow algorithm never joins multiple
-          // items into one line.
-          content.startsWith("- ")
-              || content.startsWith("* ")
-              || NUMBERED_ITEM_RE.containsMatchIn(content) -> {
-            if (current.isNotEmpty()) {
-              result += current; current = mutableListOf()
-            }
-            result += mutableListOf(line)
           }
 
           else -> current += line
@@ -276,6 +269,14 @@ class SppDocstringFillPostFormatProcessor : PostFormatProcessor {
       val afterHash = afterIndent.removePrefix("#")
       return if (afterHash.startsWith(" ")) afterHash.substring(1).trimEnd() else afterHash.trimEnd()
     }
+
+    // Whether a line's content starts a tag or list item paragraph,
+    // whose wrapped lines hang by the tab width.
+    private fun startsHangingParagraph(content: String): Boolean =
+      content.startsWith("@")
+          || content.startsWith("- ")
+          || content.startsWith("* ")
+          || NUMBERED_ITEM_RE.containsMatchIn(content)
 
     // Check if a line is blank, ignoring indentation and the
     // leading `#`.
