@@ -17,6 +17,7 @@ import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.readLines
 
 // An S++ run configuration, whatever class implements it: the
 // plain SppRunConfiguration, or the CLion one in the "clion"
@@ -98,16 +99,49 @@ object SppRunSupport {
     return directory.takeIf { it.isDirectory() }?.toString()
   }
 
+  // Whether the project in "directory" is a library: its spp.toml
+  // has 'build = "lib"' in its [project] table. An unreadable or
+  // missing file counts as not, leaving "spp" to report it.
+  fun isLibrary(directory: Path): Boolean {
+    val lines = runCatching { directory.resolve(PROJECT_FILE).readLines() }.getOrNull() ?: return false
+    return buildType(lines) == "lib"
+  }
+
+  // The "build" value of the [project] table in spp.toml's lines,
+  // or null when there is none.
+  internal fun buildType(lines: List<String>): String? {
+    var inProject = false
+    for (raw in lines) {
+      val line = raw.substringBefore('#').trim()
+      if (line.startsWith("[")) {
+        inProject = line == "[project]"
+        continue
+      }
+      if (!inProject) continue
+      val match = BUILD_LINE.matchEntire(line) ?: continue
+      return match.groupValues[1]
+    }
+    return null
+  }
+
+  private val BUILD_LINE = Regex("""build\s*=\s*["']([^"']*)["']""")
+
   // Validate that the configuration is valid: the S++ executable
-  // is configured and a module is selected.
+  // is configured, a module is selected, and a run configuration's
+  // module is not a library, which has nothing to run.
   fun checkConfiguration(profile: SppRunProfile) {
     if (resolveSppExecutable() == null) {
       throw RuntimeConfigurationError(
         "The S++ executable is not configured. Set it in Settings | Languages & Frameworks | S++."
       )
     }
-    if (resolveWorkingDirectory(profile) == null) {
-      throw RuntimeConfigurationError("Select a module for this S++ configuration.")
+    val workingDir = resolveWorkingDirectory(profile)
+      ?: throw RuntimeConfigurationError("Select a module for this S++ configuration.")
+    if (profile.kind.runCommand == SppCommand.RUN && isLibrary(Path.of(workingDir))) {
+      throw RuntimeConfigurationError(
+        "This module is a library ('build = \"lib\"' in spp.toml), so there is nothing to run. " +
+          "Use Build to build it, or an S++ Test configuration to run its tests."
+      )
     }
   }
 
