@@ -202,6 +202,7 @@ class SppAnnotator : Annotator {
           .textAttributes(SppSyntaxHighlighter.STRING)
           .create()
         annotateEscapeSequences(element, holder)
+        annotateFormatPlaceholders(element, holder)
       }
 
       // Special highlighting for char literals (use string
@@ -274,6 +275,32 @@ class SppAnnotator : Annotator {
         .newSilentAnnotation(HighlightSeverity.INFORMATION)
         .range(TextRange(base + match.range.first, base + match.range.last + 1))
         .textAttributes(SppSyntaxHighlighter.VALID_ESCAPE)
+        .create()
+    }
+  }
+
+  // Regex to detect format-string pieces in a string literal: a
+  // "{{" or "}}" literal brace, or a "{...}" placeholder (see
+  // std::format). A placeholder cannot hold a brace, a quote or a
+  // line break, so stray braces are left alone.
+  private val formatPattern = Regex("""\{\{|}}|\{[^{}"\n]*}""")
+
+  // Highlights the format placeholders inside a string literal,
+  // braces and spec together, and the "{{"/"}}" literal braces as
+  // escapes. Every string is checked, as the lexer cannot tell
+  // which ones are passed on to be formatted.
+  private fun annotateFormatPlaceholders(element: PsiElement, holder: AnnotationHolder) {
+    val text = element.text
+    if (text.length < 2) return
+    val base = element.textRange.startOffset
+    val body = text.substring(1, text.length - 1)
+    for (match in formatPattern.findAll(body)) {
+      val key = if (match.value == "{{" || match.value == "}}") SppSyntaxHighlighter.VALID_ESCAPE
+      else SppSyntaxHighlighter.FORMAT_PLACEHOLDER
+      holder
+        .newSilentAnnotation(HighlightSeverity.INFORMATION)
+        .range(TextRange(base + 1 + match.range.first, base + 1 + match.range.last + 1))
+        .textAttributes(key)
         .create()
     }
   }

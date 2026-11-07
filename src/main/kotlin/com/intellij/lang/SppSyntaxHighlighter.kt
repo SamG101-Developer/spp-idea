@@ -79,6 +79,12 @@ class SppSyntaxHighlighter : SyntaxHighlighterBase {
     val BRACES: TextAttributesKey = TextAttributesKey.createTextAttributesKey("SPP_BRACES", BRACKET)
     val SQUARE_BRACKETS: TextAttributesKey = TextAttributesKey.createTextAttributesKey("SPP_SQUARE_BRACKETS", BRACKET)
 
+    // A format placeholder inside a string, "{}" or "{:spec}",
+    // braces included. The bundled schemes give it a colour of
+    // its own; other schemes fall back to the escape colour.
+    val FORMAT_PLACEHOLDER: TextAttributesKey =
+      TextAttributesKey.createTextAttributesKey("SPP_FORMAT_PLACEHOLDER", VALID_ESCAPE)
+
     // A char literal, apart from a string.
     val CHAR: TextAttributesKey = TextAttributesKey.createTextAttributesKey("SPP_CHAR", STRING)
 
