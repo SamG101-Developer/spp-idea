@@ -98,6 +98,8 @@
         implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
     <configurationType
         implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+    <nonProjectFileWritingAccessExtension
+        implementation="com.github.samg101developer.sppidea.module.SppReadOnlyFiles"/>
     <internalFileTemplate
         name="S++ File"/>
   </extensions>

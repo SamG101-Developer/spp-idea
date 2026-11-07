@@ -107,6 +107,18 @@ private val ZERO_ASSIGN_SPACING_TYPES = setOf(
   SppTypes.GENERIC_PARAMETER_TYPE_OPTIONAL,
 )
 
+// Statements whose value comes after an "=": a value moved onto
+// the next line is indented one level under the statement. The
+// compound assignments ("+=" etc.) are binary expressions, and
+// are indented by the binary expression rule instead.
+private val ASSIGN_VALUE_TYPES = setOf(
+  SppTypes.LET_STATEMENT_INITIALIZED,
+  SppTypes.ASSIGNMENT_STATEMENT,
+  SppTypes.CMP_STATEMENT,
+  SppTypes.TYPE_STATEMENT,
+  SppTypes.CLASS_ATTRIBUTE_DEFAULT_VALUE,
+)
+
 // Auto indentation rules for the body of a block, which
 // is any construct that has a "{" and "}" pair. The body
 // is indented one level deeper than the opening brace,
@@ -209,10 +221,26 @@ class SppBlock(
       if (child.startOffset > lBracket.startOffset && (rBracket == null || child.startOffset < rBracket.startOffset)) return Indent.getNormalIndent()
     }
 
-    // Binary operators on a newline get the normal indent,
-    // allowing a single indent aligned "or", "+" etc.
-    if (node.elementType in BINARY_EXPR_TYPES && child.elementType in BINARY_OP_TYPES)
-      return Indent.getNormalIndent()
+    // The value after an "=" on the next line gets the normal
+    // indent, as do the rest of its parts (all of "a, b = 1, 2").
+    if (node.elementType in ASSIGN_VALUE_TYPES) {
+      val assign = node.findChildByType(SppTypes.TOKEN_ASSIGN)
+      if (assign != null && child.startOffset > assign.startOffset) return Indent.getNormalIndent()
+    }
+
+    // Binary expressions: whatever follows the left operand gets
+    // the normal indent when it starts a line, so both styles
+    // indent one level: an operator leading the line ("a\n  + b")
+    // or an operand after one ending the line before ("a +\n  b").
+    // The grammar nests a chain to the right ("a + (b + c)"), and
+    // an indent is measured from the line its parent starts on. So
+    // once a nested part of the chain starts on a later line than
+    // the chain itself, that line is already one level in, and the
+    // rest of the chain is lined up with it rather than indented
+    // again.
+    if (node.elementType in BINARY_EXPR_TYPES && child != node.firstChildNode) {
+      return if (startsBelowChainStart(node)) Indent.getNoneIndent() else Indent.getNormalIndent()
+    }
 
     // Chaining onto a newline does the same as binary operators,
     // applying a single indent to align the "." or "::" operator.
@@ -232,6 +260,30 @@ class SppBlock(
     if (node.findChildByType(SppTypes.TOKEN_LEFT_PARENTHESIS) != null) return Indent.getNormalIndent()
     if (node.findChildByType(SppTypes.TOKEN_LEFT_SQUARE_BRACKET) != null) return Indent.getNormalIndent()
     return Indent.getNoneIndent()
+  }
+
+  // The indent for a new line typed inside this block. Pressing
+  // enter after an "=" starts the value one level in, matching
+  // what the formatter does with it.
+  override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+    if (node.elementType in BINARY_EXPR_TYPES && newChildIndex > 0)
+      return ChildAttributes(Indent.getNormalIndent(), null)
+    if (node.elementType in ASSIGN_VALUE_TYPES) {
+      val previous = subBlocks.getOrNull(newChildIndex - 1) as? SppBlock
+      val assign = node.findChildByType(SppTypes.TOKEN_ASSIGN)
+      if (previous != null && assign != null && previous.node.startOffset >= assign.startOffset)
+        return ChildAttributes(Indent.getNormalIndent(), null)
+    }
+    return super.getChildAttributes(newChildIndex)
+  }
+
+  // Whether a binary expression nested in a chain of the same
+  // kind starts on a later line than the chain's first operand.
+  private fun startsBelowChainStart(node: ASTNode): Boolean {
+    var root = node
+    while (root.treeParent?.elementType == node.elementType) root = root.treeParent
+    if (root === node) return false
+    return root.text.substring(0, node.startOffset - root.startOffset).contains('\n')
   }
 
   // The function that determines the spacing between two child
