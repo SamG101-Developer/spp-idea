@@ -119,6 +119,14 @@ private val ASSIGN_VALUE_TYPES = setOf(
   SppTypes.CLASS_ATTRIBUTE_DEFAULT_VALUE,
 )
 
+// Function and closure prototypes, whose "-> Type" on a line of
+// its own is indented one level, like their parameters are.
+private val RETURN_TYPE_OWNER_TYPES = setOf(
+  SppTypes.SUBROUTINE_PROTOTYPE,
+  SppTypes.COROUTINE_PROTOTYPE,
+  SppTypes.CLOSURE_EXPRESSION_WITH_RETURN_TYPE,
+)
+
 // Auto indentation rules for the body of a block, which
 // is any construct that has a "{" and "}" pair. The body
 // is indented one level deeper than the opening brace,
@@ -221,6 +229,14 @@ class SppBlock(
       if (child.startOffset > lBracket.startOffset && (rBracket == null || child.startOffset < rBracket.startOffset)) return Indent.getNormalIndent()
     }
 
+    // A return type moved onto its own line ("->" and the type
+    // after it) gets the normal indent, matching the parameters.
+    if (node.elementType in RETURN_TYPE_OWNER_TYPES) {
+      val arrow = node.findChildByType(SppTypes.TOKEN_ARROW_RIGHT)
+      if (arrow != null && (child === arrow || child.treePrev?.let { skipWhiteSpaceBack(it) } === arrow))
+        return Indent.getNormalIndent()
+    }
+
     // The value after an "=" on the next line gets the normal
     // indent, as do the rest of its parts (all of "a, b = 1, 2").
     if (node.elementType in ASSIGN_VALUE_TYPES) {
@@ -275,6 +291,13 @@ class SppBlock(
         return ChildAttributes(Indent.getNormalIndent(), null)
     }
     return super.getChildAttributes(newChildIndex)
+  }
+
+  // The nearest node at or before "node" that is not whitespace.
+  private fun skipWhiteSpaceBack(node: ASTNode): ASTNode? {
+    var current: ASTNode? = node
+    while (current != null && current.elementType == TokenType.WHITE_SPACE) current = current.treePrev
+    return current
   }
 
   // Whether a binary expression nested in a chain of the same
