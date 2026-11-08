@@ -47,10 +47,10 @@ object SppProjectScaffolder {
       override fun run(indicator: ProgressIndicator) {
         runSppInit(project, contentRoot.path)
         VfsUtil.markDirtyAndRefresh(false, true, true, contentRoot)
-        module = ReadAction.compute<Module?, Throwable> {
+        module = ReadAction.nonBlocking<Module?> {
           ModuleUtilCore.findModuleForFile(contentRoot, project)
             ?: ModuleManager.getInstance(project).modules.singleOrNull()
-        }
+        }.executeSynchronously()
       }
 
       override fun onSuccess() {

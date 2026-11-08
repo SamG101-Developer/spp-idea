@@ -13,12 +13,16 @@ private const val BUNDLE = "messages.MyBundle"
 // it to support multiple languages. The messages are defined
 // in the MyBundle.properties file, and can be accessed using
 // the message() and messagePointer() methods
-object MyBundle : DynamicBundle(BUNDLE) {
+object MyBundle {
+  // DynamicBundle is not to be subclassed any more, so the
+  // object holds an instance and delegates to it.
+  private val INSTANCE = DynamicBundle(MyBundle::class.java, BUNDLE)
+
   // The message() method retrieves a localised message from the
   // MyBundle.properties file, given a key and optional parameters.
   @JvmStatic
   fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any) =
-    getMessage(key, *params)
+    INSTANCE.getMessage(key, *params)
 
   // The messagePointer() method retrieves a localised message
   // from the MyBundle.properties file, given a key and optional
@@ -28,5 +32,5 @@ object MyBundle : DynamicBundle(BUNDLE) {
   @Suppress("unused")
   @JvmStatic
   fun messagePointer(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any) =
-    getLazyMessage(key, *params)
+    INSTANCE.getLazyMessage(key, *params)
 }
