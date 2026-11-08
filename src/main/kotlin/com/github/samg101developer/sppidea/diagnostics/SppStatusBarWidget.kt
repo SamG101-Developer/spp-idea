@@ -25,6 +25,9 @@ class SppStatusBarWidgetFactory : StatusBarWidgetFactory {
 // The widget in the toolbar which says when the compiler is
 // working. It polls the compiler's diagnostics service once
 // a second, and updates itself when the service is analysing.
+// No compatibility bridges: they would override and call the
+// deprecated getPresentation(PlatformType).
+@JvmDefaultWithoutCompatibility
 private class SppStatusBarWidget(private val project: Project) :
   StatusBarWidget, StatusBarWidget.TextPresentation {
 

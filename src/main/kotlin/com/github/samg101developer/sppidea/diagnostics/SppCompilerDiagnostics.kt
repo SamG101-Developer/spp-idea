@@ -266,7 +266,7 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
   private fun refreshEditor() {
     ApplicationManager.getApplication().invokeLater {
       if (!project.isDisposed) {
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart("S++ compiler diagnostics updated")
       }
     }
   }

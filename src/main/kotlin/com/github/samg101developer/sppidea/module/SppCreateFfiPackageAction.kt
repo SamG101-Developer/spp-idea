@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -59,7 +59,7 @@ class SppCreateFfiPackageAction : AnAction(), DumbAware {
   }
 
   private fun selectIn(view: IdeView, project: Project, stub: VirtualFile) {
-    FileEditorManager.getInstance(project).openFile(stub, true)
+    OpenFileDescriptor(project, stub).navigate(true)
     PsiManager.getInstance(project).findFile(stub)?.let { view.selectElement(it) }
   }
 
