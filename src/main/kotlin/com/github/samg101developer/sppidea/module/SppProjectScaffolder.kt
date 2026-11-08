@@ -1,6 +1,12 @@
 package com.github.samg101developer.sppidea.module
 
+import com.github.samg101developer.sppidea.run.SppConfigurationKind
+import com.github.samg101developer.sppidea.run.SppConfigurationType
+import com.github.samg101developer.sppidea.run.SppRunProfile
+import com.github.samg101developer.sppidea.run.SppRunSupport
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.intellij.execution.RunManager
+import com.intellij.execution.configurations.ConfigurationTypeUtil
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.notification.NotificationGroupManager
@@ -48,6 +54,7 @@ object SppProjectScaffolder {
       }
 
       override fun onSuccess() {
+        addRunConfigurations(project, contentRoot)
         val module = module ?: return
         WriteAction.run<Throwable> { addSourceRoots(module, contentRoot) }
       }
@@ -127,6 +134,33 @@ object SppProjectScaffolder {
     } catch (e: Throwable) {
       model.dispose()
       throw e
+    }
+  }
+
+  // Add an "S++" (run) and an "S++ Test" configuration for the
+  // new module, selecting the run one. The module is the content
+  // root's folder; its parent is only stored when it is not the
+  // default modules directory, so the configurations keep working
+  // if the project is moved. Existing ones of the same name are
+  // left alone.
+  private fun addRunConfigurations(project: Project, contentRoot: VirtualFile) {
+    val runManager = RunManager.getInstance(project)
+    val type = ConfigurationTypeUtil.findConfigurationType(SppConfigurationType::class.java)
+    val moduleName = contentRoot.name
+    val parent = contentRoot.parent?.toNioPath()
+    val modulesPath = parent?.takeIf { it != SppRunSupport.defaultModulesDirectory(project) }?.toString() ?: ""
+
+    SppConfigurationKind.entries.forEach { kind ->
+      val name = moduleName + kind.nameSuffix
+      if (runManager.findConfigurationByTypeAndName(type, name) != null) return@forEach
+      val factory = type.configurationFactories.first { it.id == kind.factoryId }
+      val settings = runManager.createConfiguration(name, factory)
+      (settings.configuration as? SppRunProfile)?.let {
+        it.moduleName = moduleName
+        it.modulesPath = modulesPath
+      }
+      runManager.addConfiguration(settings)
+      if (kind == SppConfigurationKind.SOURCE) runManager.selectedConfiguration = settings
     }
   }
 

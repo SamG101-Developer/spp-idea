@@ -65,6 +65,8 @@
         implementation="com.intellij.lang.SppBreadcrumbsProvider"/>
     <enterHandlerDelegate
         implementation="com.intellij.lang.SppFunctionDocstringEnterHandler"/>
+    <enterHandlerDelegate
+        implementation="com.github.samg101developer.sppidea.diagnostics.SppOverrideEnterHandler"/>
     <postFormatProcessor
         implementation="com.intellij.lang.SppTrailingNewlinePostFormatProcessor"/>
     <postFormatProcessor
@@ -96,6 +98,12 @@
         implementation="com.github.samg101developer.sppidea.module.SppDirectoryProjectGenerator"/>
     <configurationType
         implementation="com.github.samg101developer.sppidea.run.SppConfigurationType"/>
+    <executionTargetProvider
+        implementation="com.github.samg101developer.sppidea.run.SppModeTargetProvider"/>
+    <nonProjectFileWritingAccessExtension
+        implementation="com.github.samg101developer.sppidea.module.SppReadOnlyFiles"/>
+    <internalFileTemplate
+        name="S++ File"/>
   </extensions>
 
   <projectListeners>
@@ -108,9 +116,20 @@
     <action
         id="Spp.Build" class="com.github.samg101developer.sppidea.run.SppBuildAction" text="Build"
         description="Run 'spp build' for the selected S++ configuration" icon="AllIcons.Actions.Compile">
-      <add-to-group group-id="MainToolbarRight" anchor="before" relative-to-action="NewUiRunWidget"/>
+      <add-to-group group-id="RunToolbarMainActionGroup" anchor="after" relative-to-action="RedesignedRunConfigurationSelector"/>
       <add-to-group group-id="ToolbarRunGroup" anchor="before" relative-to-action="RunnerActions"/>
       <add-to-group group-id="RunMenu" anchor="first"/>
+    </action>
+    <action
+        id="Spp.NewFile" class="com.github.samg101developer.sppidea.module.SppCreateFileAction" text="S++ File"
+        description="Create a new S++ file" icon="/icons/logo-tiny.svg">
+      <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
+    </action>
+    <action
+        id="Spp.NewFfiPackage" class="com.github.samg101developer.sppidea.module.SppCreateFfiPackageAction"
+        text="S++ FFI Package" description="Create an S++ FFI package: a folder in 'ffi' with an empty stub.spp"
+        icon="/icons/logo-tiny.svg">
+      <add-to-group group-id="NewGroup" anchor="after" relative-to-action="Spp.NewFile"/>
     </action>
   </actions>
 </idea-plugin>

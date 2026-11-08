@@ -1,0 +1,36 @@
+<list>
+  <option name="SPP_FORMAT_PLACEHOLDER">
+    <value>
+      <option name="FOREGROUND" value="2fbaa3"/>
+    </value>
+  </option>
+  <option name="SPP_DOCSTRING_PARAM_REF">
+    <value>
+      <option name="FOREGROUND" value="ffff00"/>
+    </value>
+  </option>
+  <option name="SPP_UNREACHED_CODE">
+    <value>
+      <option name="FOREGROUND" value="6b6b6b"/>
+      <option name="FONT_TYPE" value="2"/>
+    </value>
+  </option>
+  <option name="SPP_INLINE_ERROR">
+    <value>
+      <option name="FOREGROUND" value="ff0000"/>
+      <option name="FONT_TYPE" value="2"/>
+    </value>
+  </option>
+  <option name="SPP_INLINE_EXPLANATION">
+    <value>
+      <option name="FOREGROUND" value="00ff00"/>
+      <option name="FONT_TYPE" value="2"/>
+    </value>
+  </option>
+  <option name="SPP_INLINE_CMP_VALUE">
+    <value>
+      <option name="FOREGROUND" value="ffffff"/>
+      <option name="FONT_TYPE" value="2"/>
+    </value>
+  </option>
+</list>

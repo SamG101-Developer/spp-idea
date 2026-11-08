@@ -1,5 +1,6 @@
 package com.github.samg101developer.sppidea.run
 
+import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.LocatableConfigurationBase
@@ -48,6 +49,9 @@ class SppRunConfiguration(
     SppRunConfigurationEditor(project)
 
   override fun suggestedName(): String? = SppRunSupport.suggestedName(this)
+
+  // Runs only on the build modes it supports (SppModeTarget).
+  override fun canRunOn(target: ExecutionTarget): Boolean = super<SppRunProfile>.canRunOn(target)
 
   override fun checkConfiguration() = SppRunSupport.checkConfiguration(this)
 

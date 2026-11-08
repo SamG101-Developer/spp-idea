@@ -3,6 +3,7 @@ package com.github.samg101developer.sppidea.diagnostics
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.PlainPrefixMatcher
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.Document
@@ -26,11 +27,30 @@ class SppCompletionContributor : CompletionContributor() {
     val text = document.charsSequence
     val offset = parameters.offset
 
+    // Between the members of a "sup ext" block, what is offered is
+    // the superclass methods still to override, and nothing else.
+    val service = SppCompilerDiagnostics.getInstance(file.project)
+    val block = SppOverrideLookup.enclosingBlock(text, offset)
+    val memberSoFar = text.subSequence(document.getLineStartOffset(document.getLineNumber(offset)), offset).trimStart()
+    if (block != null && MEMBER_START.matches(memberSoFar)) {
+      val pending = SppOverrideLookup.pending(service.cachedOverridablesFor(path), block, text, document)
+
+      // A block newer than the last analysis: analyse it, and open
+      // the menu once the answer is in. Only when asked for, so an
+      // automatic popup cannot keep re-triggering itself.
+      if (pending == null) {
+        if (parameters.invocationCount > 0) SppOverrideCompletion.popupWhenAnalysed(parameters.editor, file)
+        return
+      }
+      val overrides = result.withPrefixMatcher(PlainPrefixMatcher(memberSoFar.toString()))
+      pending.forEach { overrides.addElement(SppOverrideCompletion.lookupFor(it)) }
+      return
+    }
+
     // From the diagnostic service, get the symbols known for
     // this file. If none are known, it has not been analysed
     // yet, so fire up a background analysis and return: the
     // completion will be filled in once that is done.
-    val service = SppCompilerDiagnostics.getInstance(file.project)
     val symbols = service.cachedSymbolsFor(path)
     if (symbols.isEmpty() && !service.isAnalysed(path)) {
       file.virtualFile?.let { service.warmUp(it) }
@@ -165,6 +185,13 @@ class SppCompletionContributor : CompletionContributor() {
       else -> return kind
     }
     return IconManager.getInstance().createRowIcon(kind, marker)
+  }
+
+  private companion object {
+    // What can start a member in a "sup ext" block that an
+    // override is offered for: nothing yet, a name, or the start
+    // of a header ("fun ar", "cmp fun").
+    val MEMBER_START = Regex("""^(?:(?:cmp\s+)?(?:fun|cor)(?:\s+\w*)?|cmp|\w*)$""")
   }
 
   // The icon for each member type, to show alongside the member

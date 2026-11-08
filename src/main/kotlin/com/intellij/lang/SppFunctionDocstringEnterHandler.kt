@@ -278,7 +278,7 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
 
   private fun genericParamLine(gp: SppGenericParameter): String {
     val name = genericParamName(gp) ?: return ""
-    val tag = if (gp.genericParameterType != null) "type" else "cmp"
+    val tag = if (gp.genericParameterType != null) SppDocstringTags.TYPE else SppDocstringTags.CMP
     return "# @$tag $name: \n"
   }
 
@@ -290,23 +290,23 @@ class SppFunctionDocstringEnterHandler : EnterHandlerDelegateAdapter() {
       fp.functionParameterVariadic != null -> ".."
       else -> return ""
     }
-    return "# @let $prefix$name: \n"
+    return "# @${SppDocstringTags.LET} $prefix$name: \n"
   }
 
   private fun funcReturnLine(): String {
-    return "# @ret: \n"
+    return "# @${SppDocstringTags.RET}: \n"
   }
 
   private fun supTypeStatementLine(typeIdentifier: String): String {
-    return "# @type $typeIdentifier: \n"
+    return "# @${SppDocstringTags.TYPE} $typeIdentifier: \n"
   }
 
   private fun supCmpStatementLine(cmpIdentifier: String): String {
-    return "# @cmp $cmpIdentifier: \n"
+    return "# @${SppDocstringTags.CMP} $cmpIdentifier: \n"
   }
 
   private fun clsFieldLine(fieldIdentifier: String): String {
-    return "# @let $fieldIdentifier: \n"
+    return "# @${SppDocstringTags.LET} $fieldIdentifier: \n"
   }
 
   private fun genericParamName(gp: SppGenericParameter): String? = when {

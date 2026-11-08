@@ -58,6 +58,7 @@ private val ATTRIBUTES = arrayOf(
   AttributesDescriptor("Literals//String", SppSyntaxHighlighter.STRING),
   AttributesDescriptor("Literals//Char", SppSyntaxHighlighter.CHAR),
   AttributesDescriptor("Literals//Escape sequence", SppSyntaxHighlighter.VALID_ESCAPE),
+  AttributesDescriptor("Literals//Format placeholder", SppSyntaxHighlighter.FORMAT_PLACEHOLDER),
 
   AttributesDescriptor("Braces and brackets//Shared default", SppSyntaxHighlighter.BRACKET),
   AttributesDescriptor("Braces and brackets//Parentheses", SppSyntaxHighlighter.PARENTHESES),
@@ -110,6 +111,7 @@ private val TAGS = mapOf(
   "string" to SppSyntaxHighlighter.STRING,
   "char" to SppSyntaxHighlighter.CHAR,
   "escape" to SppSyntaxHighlighter.VALID_ESCAPE,
+  "format" to SppSyntaxHighlighter.FORMAT_PLACEHOLDER,
   "doc" to SppSyntaxHighlighter.DOCSTRING,
   "doc_tag" to SppSyntaxHighlighter.DOCSTRING_TAG,
   "doc_tag_value" to SppSyntaxHighlighter.DOCSTRING_TAG_VALUE,
@@ -155,6 +157,7 @@ fun main() -> Void {
 # An ordinary comment.
 let greeting = <ns>std</ns>::<ns>string</ns>::Str::<ns_call>from</ns_call>(<string>"hello</string><escape>\n</escape><string>"</string>)
 let initial = <char>'h'</char>
+let line = <ns>std</ns>::<ns>format</ns>::<ns_call>format</ns_call>(<string>"</string><format>{}</format><string> has </string><format>{:>8.2}</format><string> </string><escape>{{</escape><string>items</string><escape>}}</escape><string>"</string>, greeting.<method>clone</method>(), 1.5<num_suffix>_f64</num_suffix>)
 let copy = greeting.<method>clone</method>()
 let total = <call>sum</call>([1<num_suffix>_s32</num_suffix>, 2<num_suffix>_s32</num_suffix>, 3<num_suffix>_s32</num_suffix>])
 let limit = <ns>std</ns>::<ns>number</ns>::max_s32

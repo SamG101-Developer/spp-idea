@@ -84,6 +84,26 @@ data class SppInactiveRegion(
   val where: SppSpan,
 )
 
+// One superclass method a "sup ext" block can still override:
+// "abstract" (it must) or "virtual" (it may). The prototype is
+// the header to write, "fun area(&self) -> S32".
+data class SppOverridable(
+  val name: String,
+  val prototype: String,
+  val modifier: String,
+  val definition: SppSpan?,
+)
+
+// What one "sup Name ext SuperCls" block could still override,
+// with the two types as written, so a block that has moved
+// since the compile can still be matched to its entry.
+data class SppOverridableList(
+  val where: SppSpan,
+  val name: String,
+  val superclass: String,
+  val methods: List<SppOverridable>,
+)
+
 // What one part of a file can name: everything the scope
 // covering that region holds.
 data class SppScope(
@@ -100,6 +120,10 @@ data class SppDiagnostic(
   val labels: List<SppLabel>,
   val note: String,
   val help: String,
+  // The full text of any error this one caught and re-raised,
+  // e.g. the real error inside generated code. It is the
+  // compiler's terminal rendering, so it is shown verbatim.
+  val wrapped: List<String> = emptyList(),
 ) {
   val primaryLabel: SppLabel? get() = labels.firstOrNull { it.primary }
 }
@@ -150,6 +174,26 @@ object SppDiagnosticParser {
   fun parseInactive(output: String, toIde: (String) -> String = { it }): List<SppInactiveRegion> =
     objectsIn(output, "inactive").mapNotNull { obj ->
       SppInactiveRegion(where = toSpan(obj["where"], toIde) ?: return@mapNotNull null)
+    }
+
+  // From compiler JSON output, what each "sup ext" block could
+  // still override, for completion inside the block.
+  fun parseOverridables(output: String, toIde: (String) -> String = { it }): List<SppOverridableList> =
+    objectsIn(output, "overridables").mapNotNull { obj ->
+      SppOverridableList(
+        where = toSpan(obj["where"], toIde) ?: return@mapNotNull null,
+        name = obj["name"] as? String ?: "",
+        superclass = obj["superclass"] as? String ?: "",
+        methods = (obj["methods"] as? List<*>).orEmpty().mapNotNull { value ->
+          val m = value as? Map<*, *> ?: return@mapNotNull null
+          SppOverridable(
+            name = m["name"] as? String ?: return@mapNotNull null,
+            prototype = m["prototype"] as? String ?: return@mapNotNull null,
+            modifier = m["modifier"] as? String ?: "",
+            definition = toSpan(m["definition"], toIde),
+          )
+        },
+      )
     }
 
   // From compiler JSON output, create the list of scopes that
@@ -241,6 +285,7 @@ object SppDiagnosticParser {
       labels = labels,
       note = obj["note"] as? String ?: "",
       help = obj["help"] as? String ?: "",
+      wrapped = (obj["wrapped"] as? List<*>).orEmpty().filterIsInstance<String>().filter { it.isNotBlank() },
     )
   }
 
