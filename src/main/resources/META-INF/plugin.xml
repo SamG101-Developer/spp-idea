@@ -110,6 +110,12 @@
     <listener
         class="com.github.samg101developer.sppidea.diagnostics.SppOpenFileWarmup"
         topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    <listener
+        class="com.github.samg101developer.sppidea.run.SppExecutableSelectionListener"
+        topic="com.intellij.execution.RunManagerListener"/>
+    <listener
+        class="com.github.samg101developer.sppidea.run.SppTargetMemoryListener"
+        topic="com.intellij.execution.ExecutionTargetListener"/>
   </projectListeners>
 
   <actions>

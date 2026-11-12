@@ -23,8 +23,7 @@ import org.jetbrains.concurrency.rejectedPromise
 // which expect CLion's command line state and fail on ours. This
 // runner is registered first, so it claims them all: "Run" runs
 // "spp" as usual, and the others report that they do not apply.
-// Debug is left alone: the configuration suppresses it, so no
-// runner offers it.
+// Debug is SppCidrDebugRunner's.
 class SppCidrProgramRunner : AsyncProgramRunner<RunnerSettings>() {
   override fun getRunnerId(): String = "SppCidrProgramRunner"
 

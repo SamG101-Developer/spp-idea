@@ -1,6 +1,7 @@
 package com.github.samg101developer.sppidea.run
 
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.github.samg101developer.sppidea.settings.sppExecutableMissingMessage
 import com.intellij.build.BuildDescriptor
 import com.intellij.build.BuildViewManager
 import com.intellij.build.DefaultBuildDescriptor
@@ -28,14 +29,26 @@ import java.util.concurrent.atomic.AtomicBoolean
 // tool window, not a run console.
 object SppBuildLauncher {
 
-  fun build(project: Project, configuration: SppRunProfile) {
-    if (!configuration.kind.buildable) return
+  fun build(project: Project, configuration: SppRunProfile) =
+    build(project, configuration, SppModeTarget.modeFor(configuration, null)) {}
+
+  // Build in "mode", then call "then" with whether the build
+  // succeeded (false too when it could not start, or was
+  // stopped). The configuration's program arguments are not
+  // passed: they are the program's, and "spp build" refuses them.
+  // "forDebugger" builds for a debugger to run ("--for-debugger":
+  // no split stack, whose variables a debugger loses track of).
+  fun build(
+    project: Project, configuration: SppRunProfile, mode: SppBuildMode, forDebugger: Boolean = false,
+    then: (Boolean) -> Unit,
+  ) {
+    if (!configuration.kind.buildable) return then(false)
 
     // Ensure the s++ executable has been provided in the settings.
-    val sppPath = resolveSppExecutable() ?: return notifyFailure(
+    val sppPath = resolveSppExecutable(configuration.executableName) ?: return notifyFailure(
       project,
-      "The S++ executable is not configured. Set it in Settings | Languages & Frameworks | S++.",
-    )
+      sppExecutableMissingMessage(configuration.executableName),
+    ).also { then(false) }
 
     // Ensure the working directory is set, which is the module's
     // content root. Todo: Allow manual selection of CWD in the
@@ -43,26 +56,30 @@ object SppBuildLauncher {
     val workingDir = SppRunSupport.resolveWorkingDirectory(configuration) ?: return notifyFailure(
       project,
       "Select a module for '${configuration.name}' before building it.",
-    )
+    ).also { then(false) }
 
     // Starting a process is not allowed on the UI thread, which
     // the Build action runs on, so the rest happens on a pooled
     // thread. The build progress is safe to report from there.
     ApplicationManager.getApplication().executeOnPooledThread {
-      start(project, configuration, sppPath, workingDir)
+      start(project, configuration, sppPath, workingDir, mode, forDebugger, then)
     }
   }
 
   // Start "spp build" and report it to the build tool window.
-  private fun start(project: Project, configuration: SppRunProfile, sppPath: String, workingDir: String) {
+  private fun start(
+    project: Project, configuration: SppRunProfile, sppPath: String, workingDir: String, mode: SppBuildMode,
+    forDebugger: Boolean, then: (Boolean) -> Unit,
+  ) {
     // Create the command line and start the process. If it fails
     // to start, report it as a notification.
-    val mode = SppModeTarget.modeFor(configuration, null)
-    val commandLine = sppCommandLine(sppPath, SppCommand.BUILD, workingDir, configuration.programArguments, mode)
+    val commandLine = sppCommandLine(sppPath, SppCommand.BUILD, workingDir, null, mode)
+    if (forDebugger) commandLine.addParameter("--for-debugger")
     val handler = try {
       startSppProcess(commandLine)
     } catch (e: ExecutionException) {
-      return notifyFailure(project, e.message ?: "Could not start '${commandLine.commandLineString}'.")
+      notifyFailure(project, e.message ?: "Could not start '${commandLine.commandLineString}'.")
+      return then(false)
     }
 
     // A stopped build is reported as cancelled rather than failed,
@@ -104,6 +121,7 @@ object SppBuildLauncher {
             FailureResultImpl("'spp build' exited with code ${event.exitCode}"),
           )
         }
+        then(!cancelled.get() && event.exitCode == 0)
       }
     })
     handler.startNotify()

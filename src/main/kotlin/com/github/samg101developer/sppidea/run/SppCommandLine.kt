@@ -6,7 +6,9 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.util.execution.ParametersListUtil
 
 // Build the command line for one "spp" executable invocation,
-// shared by the run config and the build action.
+// shared by the run config and the build action. A run's
+// arguments are the program's, so they follow "--", which
+// "spp run" passes on to it; a test's are "spp test"'s own.
 fun sppCommandLine(
   sppPath: String,
   command: SppCommand,
@@ -20,7 +22,10 @@ fun sppCommandLine(
     .withParameters(command.cliArg)
     .withWorkDirectory(workingDir)
   commandLine.addParameters("--mode", mode.cliArg)
-  arguments?.takeIf { it.isNotBlank() }?.let { commandLine.addParameters(ParametersListUtil.parse(it)) }
+  arguments?.takeIf { it.isNotBlank() }?.let {
+    if (command == SppCommand.RUN) commandLine.addParameter("--")
+    commandLine.addParameters(ParametersListUtil.parse(it))
+  }
   return commandLine
 }
 

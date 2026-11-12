@@ -12,5 +12,15 @@
     <programRunner
         implementation="com.github.samg101developer.sppidea.clion.SppCidrProgramRunner"
         order="first"/>
+    <!-- Ahead of CLion's own, which would take the configuration for a C++ one. -->
+    <programRunner
+        implementation="com.github.samg101developer.sppidea.clion.SppCidrDebugRunner"
+        order="first"/>
+  </extensions>
+
+  <!-- Line breakpoints in .spp files, for the native debugger. -->
+  <extensions defaultExtensionNs="cidr.debugger">
+    <lineBreakpointFileTypesProvider
+        implementation="com.github.samg101developer.sppidea.clion.SppLineBreakpointFileTypes"/>
   </extensions>
 </idea-plugin>
