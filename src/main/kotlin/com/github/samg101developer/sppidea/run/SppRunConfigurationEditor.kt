@@ -1,11 +1,13 @@
 package com.github.samg101developer.sppidea.run
 
+import com.github.samg101developer.sppidea.settings.SppSettings
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
@@ -14,17 +16,26 @@ import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
 
-// Editor UI for run configuration: the directory to look for
+// Editor UI for run configuration: the `spp` executable to use
+// (one of those named in the S++ settings), the directory to look for
 // modules in, the module (an S++ project in that directory),
 // and optional program arguments passed after the "spp"
 // subcommand.
 class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<SppRunProfile>() {
+  // "" stands for the default executable.
+  private val executableModel = DefaultComboBoxModel<String>()
+  private val executableComboBox = ComboBox(executableModel)
   private val modulesPathField = TextFieldWithBrowseButton()
   private val moduleModel = DefaultComboBoxModel<String>()
   private val moduleComboBox = ComboBox(moduleModel)
   private val argumentsField = JBTextField()
 
   init {
+    executableComboBox.renderer = SimpleListCellRenderer.create("") { value ->
+      if (value.isNullOrEmpty()) "Default" + (SppSettings.getInstance().find(null)?.name?.let { " ($it)" } ?: "")
+      else value
+    }
+
     modulesPathField.addBrowseFolderListener(
       project,
       FileChooserDescriptorFactory.createSingleFolderDescriptor().withTitle("Modules Directory"),
@@ -63,6 +74,14 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
   // opens already filled in and consistent with the name the
   // configuration was given.
   override fun resetEditorFrom(configuration: SppRunProfile) {
+    // The executables in the settings, plus the configuration's
+    // own choice if it has since been removed, so that it is not
+    // silently changed (the configuration then reports it).
+    val chosen = configuration.executableName ?: ""
+    val names = SppSettings.getInstance().executables.map { it.name }
+    executableModel.removeAllElements()
+    executableModel.addAll(listOf("") + names + listOfNotNull(chosen.takeIf { it.isNotEmpty() && it !in names }))
+    executableComboBox.selectedItem = chosen
     modulesPathField.text = configuration.modulesPath ?: ""
     refreshModules(configuration.moduleName?.takeIf { it.isNotBlank() })
     argumentsField.text = configuration.programArguments ?: ""
@@ -72,6 +91,7 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
   // program arguments chosen in the form. A blank directory is
   // stored as blank, so that it keeps following the default.
   override fun applyEditorTo(configuration: SppRunProfile) {
+    configuration.executableName = executableComboBox.selectedItem as? String ?: ""
     configuration.modulesPath = modulesPathField.text.trim()
     configuration.moduleName = moduleComboBox.selectedItem as? String
     configuration.programArguments = argumentsField.text
@@ -81,6 +101,10 @@ class SppRunConfigurationEditor(private val project: Project) : SettingsEditor<S
   // module (an S++ project, i.e. a folder with "spp.toml", in
   // that directory), and the program arguments.
   override fun createEditor(): JComponent = panel {
+    row("S++ executable:") {
+      cell(executableComboBox).align(AlignX.FILL)
+        .comment("Configured in Settings | Languages & Frameworks | S++. Code analysis uses the selected configuration's executable.")
+    }
     row("Modules directory:") {
       cell(modulesPathField).align(AlignX.FILL)
         .comment("Folder containing S++ projects. Leave blank for the project root's parent, so the root itself is listed.")

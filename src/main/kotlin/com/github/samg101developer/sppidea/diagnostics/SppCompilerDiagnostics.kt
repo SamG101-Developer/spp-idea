@@ -1,6 +1,6 @@
 package com.github.samg101developer.sppidea.diagnostics
 
-import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.github.samg101developer.sppidea.run.SppRunSupport
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
@@ -130,7 +130,9 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
   // or when one run has only just finished.
   fun analyse(root: Path, executable: String, indexFile: Path? = null): SppAnalysis {
     val stamp = PsiModificationTracker.getInstance(project).modificationCount
-    val key = "$root|${indexFile ?: "project"}"
+    // The executable is part of the key, so switching to a
+    // configuration with another toolchain analyses again.
+    val key = "$executable|$root|${indexFile ?: "project"}"
 
     lock.withLock {
       val unchanged = stamp == cachedStamp && key == cachedKey
@@ -204,7 +206,7 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
   fun reanalyse(file: VirtualFile) {
     val path = runCatching { file.toNioPath().absolute() }.getOrNull() ?: return
     val root = projectRootFor(path) ?: return
-    val executable = resolveSppExecutable() ?: return
+    val executable = SppRunSupport.executableFor(project) ?: return
     val target = if (isProjectFile(root, path)) null else path
 
     ApplicationManager.getApplication().executeOnPooledThread {
@@ -293,7 +295,7 @@ class SppCompilerDiagnostics(private val project: Project) : ModificationTracker
     }
 
     val root = projectRootFor(path) ?: return
-    val executable = resolveSppExecutable() ?: return
+    val executable = SppRunSupport.executableFor(project) ?: return
 
     // One compile analyses every module there is, so a file the
     // project itself holds is indexed along with all of its

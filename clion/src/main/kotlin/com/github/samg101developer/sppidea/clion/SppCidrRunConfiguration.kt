@@ -6,18 +6,20 @@ import com.github.samg101developer.sppidea.run.SppRunConfigurationOptions
 import com.github.samg101developer.sppidea.run.SppRunConfigurationProvider
 import com.github.samg101developer.sppidea.run.SppRunProfile
 import com.github.samg101developer.sppidea.run.SppRunSupport
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.RunConfiguration
-import com.intellij.execution.configurations.RunConfigurationWithSuppressedDefaultDebugAction
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.jetbrains.cidr.execution.CidrBuildConfiguration
 import com.jetbrains.cidr.execution.CidrBuildConfigurationHelper
 import com.jetbrains.cidr.execution.CidrBuildTarget
+import com.jetbrains.cidr.execution.CidrCommandLineState
 import com.jetbrains.cidr.lang.workspace.OCResolveConfiguration
 import com.jetbrains.cidr.lang.workspace.OCRunConfiguration
 import com.jetbrains.cidr.lang.workspace.OCWorkspaceRunConfigurationListener
@@ -41,13 +43,18 @@ class SppCidrRunConfiguration(
   name: String,
   override val kind: SppConfigurationKind,
 ) : OCRunConfiguration<SppCidrRunConfiguration.NoBuildConfiguration, SppCidrRunConfiguration.NoBuildTarget>(project, factory, name),
-  SppRunProfile,
-  RunConfigurationWithSuppressedDefaultDebugAction {
+  SppRunProfile {
 
   // The factory's options class, SppRunConfigurationOptions, so
   // the module and arguments are stored exactly as in other IDEs.
   private val sppOptions: SppRunConfigurationOptions
     get() = options as SppRunConfigurationOptions
+
+  override var executableName: String?
+    get() = sppOptions.executableName
+    set(value) {
+      sppOptions.executableName = value
+    }
 
   override var modulesPath: String?
     get() = sppOptions.modulesPath
@@ -90,8 +97,17 @@ class SppCidrRunConfiguration(
 
   override fun checkConfiguration() = SppRunSupport.checkConfiguration(this)
 
-  override fun getState(executor: Executor, environment: ExecutionEnvironment): CommandLineState =
-    SppRunSupport.createState(this, environment)
+  // Run runs "spp" (SppRunSupport); Debug starts the program
+  // "spp" built under CLion's debugger (SppCidrDebugRunner). A
+  // test configuration is not debugged: "spp test" runs the tests
+  // itself.
+  override fun getState(executor: Executor, environment: ExecutionEnvironment): CommandLineState {
+    if (executor.id != DefaultDebugExecutor.EXECUTOR_ID) return SppRunSupport.createState(this, environment)
+    if (kind != SppConfigurationKind.SOURCE) throw ExecutionException("S++ test configurations cannot be debugged yet.")
+    val workingDir = SppRunSupport.resolveWorkingDirectory(this)
+      ?: throw ExecutionException("No module selected for this run configuration.")
+    return CidrCommandLineState(environment, SppDebugLauncher(project, workingDir, programArguments))
+  }
 
   // The build configuration and target types CLion's base class
   // asks for. There are never any of them.

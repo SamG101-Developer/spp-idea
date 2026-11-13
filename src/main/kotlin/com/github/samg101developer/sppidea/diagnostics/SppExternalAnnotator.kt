@@ -1,6 +1,6 @@
 package com.github.samg101developer.sppidea.diagnostics
 
-import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.github.samg101developer.sppidea.run.SppRunSupport
 import com.intellij.lang.SppSyntaxHighlighter
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.ExternalAnnotator
@@ -38,7 +38,7 @@ class SppExternalAnnotator : ExternalAnnotator<SppAnnotationRequest, List<SppDia
     if (hasErrors) return null
     val path = file.virtualFile?.takeIf { it.isInLocalFileSystem }?.toNioPathOrNullSafely() ?: return null
     val root = SppCompilerDiagnostics.projectRootFor(path) ?: return null
-    val executable = resolveSppExecutable() ?: return null
+    val executable = SppRunSupport.executableFor(file.project) ?: return null
     return SppAnnotationRequest(file.project, root, executable, path)
   }
 

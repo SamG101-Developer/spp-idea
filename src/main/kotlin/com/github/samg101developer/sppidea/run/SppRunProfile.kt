@@ -1,6 +1,8 @@
 package com.github.samg101developer.sppidea.run
 
 import com.github.samg101developer.sppidea.settings.resolveSppExecutable
+import com.github.samg101developer.sppidea.settings.sppExecutableMissingMessage
+import com.intellij.execution.RunManager
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionTarget
 import com.intellij.execution.configurations.CommandLineState
@@ -26,6 +28,7 @@ import kotlin.io.path.readLines
 // execution targets are the build modes (SppModeTarget).
 interface SppRunProfile : RunConfiguration, TargetAwareRunProfile {
   val kind: SppConfigurationKind
+  var executableName: String?
   var modulesPath: String?
   var moduleName: String?
   var programArguments: String?
@@ -53,6 +56,15 @@ object SppRunSupport {
 
   // The file that marks a directory as an S++ project.
   const val PROJECT_FILE = "spp.toml"
+
+  // The `spp` executable for a project: the one picked by the
+  // selected S++ run configuration, or the default one when the
+  // selected configuration is not an S++ one. Used by code
+  // analysis, so switching configuration switches toolchain.
+  fun executableFor(project: Project): String? {
+    val selected = RunManager.getInstanceIfCreated(project)?.selectedConfiguration?.configuration as? SppRunProfile
+    return resolveSppExecutable(selected?.executableName)
+  }
 
   // The directory searched for modules when none is set: the
   // parent of the project root, so that the root itself is
@@ -127,13 +139,11 @@ object SppRunSupport {
   private val BUILD_LINE = Regex("""build\s*=\s*["']([^"']*)["']""")
 
   // Validate that the configuration is valid: the S++ executable
-  // is configured, a module is selected, and a run configuration's
+  // chosen is configured, a module is selected, and a run configuration's
   // module is not a library, which has nothing to run.
   fun checkConfiguration(profile: SppRunProfile) {
-    if (resolveSppExecutable() == null) {
-      throw RuntimeConfigurationError(
-        "The S++ executable is not configured. Set it in Settings | Languages & Frameworks | S++."
-      )
+    if (resolveSppExecutable(profile.executableName) == null) {
+      throw RuntimeConfigurationError(sppExecutableMissingMessage(profile.executableName))
     }
     val workingDir = resolveWorkingDirectory(profile)
       ?: throw RuntimeConfigurationError("Select a module for this S++ configuration.")
@@ -149,8 +159,8 @@ object SppRunSupport {
   // used to start the process. The state is a command line state
   // that invokes the "spp" command with the appropriate arguments.
   fun createState(profile: SppRunProfile, environment: ExecutionEnvironment): CommandLineState {
-    val sppPath = resolveSppExecutable()
-      ?: throw ExecutionException("The S++ executable is not configured. Set it in Settings | Languages & Frameworks | S++.")
+    val sppPath = resolveSppExecutable(profile.executableName)
+      ?: throw ExecutionException(sppExecutableMissingMessage(profile.executableName))
     val workingDir = resolveWorkingDirectory(profile)
       ?: throw ExecutionException("No module selected for this run configuration.")
 

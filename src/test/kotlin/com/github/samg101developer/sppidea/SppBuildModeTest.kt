@@ -59,7 +59,7 @@ class SppBuildModeTest : BasePlatformTestCase() {
 
     fun testCommandLinePassesTheMode() {
         val line = sppCommandLine("spp", SppConfigurationKind.SOURCE.runCommand, "/work", "--x", SppBuildMode.REL)
-        assertEquals(listOf("run", "--mode", "rel", "--x"), line.parametersList.list)
+        assertEquals(listOf("run", "--mode", "rel", "--", "--x"), line.parametersList.list)
         val test = sppCommandLine("spp", SppConfigurationKind.TEST.runCommand, "/work", null, SppBuildMode.DEV)
         assertEquals(listOf("test", "--mode", "dev"), test.parametersList.list)
     }
