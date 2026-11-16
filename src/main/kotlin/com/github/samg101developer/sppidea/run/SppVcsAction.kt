@@ -79,6 +79,7 @@ object SppVcsLauncher {
       ),
     )
     if (!running.add(workingDir)) return
+    saveAllDocumentsBeforeSpp()
 
     // Starting a process is not allowed on the UI thread.
     ApplicationManager.getApplication().executeOnPooledThread {

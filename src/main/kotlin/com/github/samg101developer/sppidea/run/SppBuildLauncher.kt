@@ -43,6 +43,7 @@ object SppBuildLauncher {
     then: (Boolean) -> Unit,
   ) {
     if (!configuration.kind.buildable) return then(false)
+    saveAllDocumentsBeforeSpp()
 
     // Ensure the s++ executable has been provided in the settings.
     val sppPath = resolveSppExecutable(configuration.executableName) ?: return notifyFailure(

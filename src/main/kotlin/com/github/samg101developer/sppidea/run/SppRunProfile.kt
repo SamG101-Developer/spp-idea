@@ -168,6 +168,7 @@ object SppRunSupport {
 
     return object : CommandLineState(environment) {
       override fun startProcess(): ProcessHandler {
+        saveAllDocumentsBeforeSpp()
         val handler = startSppProcess(
           sppCommandLine(sppPath, profile.kind.runCommand, workingDir, profile.programArguments, mode)
         )
