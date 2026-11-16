@@ -129,6 +129,13 @@
       <add-to-group group-id="RunMenu" anchor="first"/>
     </action>
     <action
+        id="Spp.UpdateVcs" class="com.github.samg101developer.sppidea.run.SppVcsAction" text="Update VCS Dependencies"
+        description="Run 'spp vcs' to fetch and update the project's vcs dependencies" icon="AllIcons.Actions.Refresh">
+      <add-to-group group-id="RunToolbarMainActionGroup" anchor="after" relative-to-action="RunToolbarTopLevelExecutorActionGroup"/>
+      <add-to-group group-id="ToolbarRunGroup" anchor="after" relative-to-action="RunnerActions"/>
+      <add-to-group group-id="RunMenu" anchor="after" relative-to-action="Spp.Build"/>
+    </action>
+    <action
         id="Spp.NewFile" class="com.github.samg101developer.sppidea.module.SppCreateFileAction" text="S++ File"
         description="Create a new S++ file" icon="/icons/logo-tiny.svg">
       <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>

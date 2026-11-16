@@ -138,11 +138,13 @@ object SppBuildLauncher {
   }
 
   // The "Stop" action in the build tool window, which terminates
-  // the build process and marks it as cancelled.
-  private class StopBuildAction(
+  // the process and marks it as cancelled. Shared with the vcs
+  // launcher.
+  internal class StopBuildAction(
     private val handler: ProcessHandler,
     private val cancelled: AtomicBoolean,
-  ) : AnAction("Stop", "Terminate 'spp build'", AllIcons.Actions.Suspend), DumbAware {
+    description: String = "Terminate 'spp build'",
+  ) : AnAction("Stop", description, AllIcons.Actions.Suspend), DumbAware {
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 

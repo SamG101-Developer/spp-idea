@@ -5,6 +5,7 @@ enum class SppCommand(val cliArg: String) {
   BUILD("build"),
   RUN("run"),
   TEST("test"),
+  VCS("vcs"),
 }
 
 // The kinds of run configs that the plugin offers. Note

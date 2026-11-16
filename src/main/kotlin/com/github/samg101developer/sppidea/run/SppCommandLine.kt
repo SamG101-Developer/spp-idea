@@ -6,7 +6,8 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.util.execution.ParametersListUtil
 
 // Build the command line for one "spp" executable invocation,
-// shared by the run config and the build action. A run's
+// shared by the run config, the build action and the vcs
+// action (which has no mode, so passes null). A run's
 // arguments are the program's, so they follow "--", which
 // "spp run" passes on to it; a test's are "spp test"'s own.
 fun sppCommandLine(
@@ -14,14 +15,14 @@ fun sppCommandLine(
   command: SppCommand,
   workingDir: String,
   arguments: String?,
-  mode: SppBuildMode,
+  mode: SppBuildMode?,
 ): GeneralCommandLine {
   val commandLine = PtyCommandLine(GeneralCommandLine(sppPath))
     .withConsoleMode(false)
     .withInitialColumns(200)
     .withParameters(command.cliArg)
     .withWorkDirectory(workingDir)
-  commandLine.addParameters("--mode", mode.cliArg)
+  mode?.let { commandLine.addParameters("--mode", it.cliArg) }
   arguments?.takeIf { it.isNotBlank() }?.let {
     if (command == SppCommand.RUN) commandLine.addParameter("--")
     commandLine.addParameters(ParametersListUtil.parse(it))

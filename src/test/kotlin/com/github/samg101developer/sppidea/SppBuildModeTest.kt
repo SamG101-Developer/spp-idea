@@ -1,6 +1,7 @@
 package com.github.samg101developer.sppidea
 
 import com.github.samg101developer.sppidea.run.SppBuildMode
+import com.github.samg101developer.sppidea.run.SppCommand
 import com.github.samg101developer.sppidea.run.SppConfigurationKind
 import com.github.samg101developer.sppidea.run.SppConfigurationType
 import com.github.samg101developer.sppidea.run.SppModeTarget
@@ -62,5 +63,10 @@ class SppBuildModeTest : BasePlatformTestCase() {
         assertEquals(listOf("run", "--mode", "rel", "--", "--x"), line.parametersList.list)
         val test = sppCommandLine("spp", SppConfigurationKind.TEST.runCommand, "/work", null, SppBuildMode.DEV)
         assertEquals(listOf("test", "--mode", "dev"), test.parametersList.list)
+    }
+
+    fun testVcsCommandLineHasNoMode() {
+        val line = sppCommandLine("spp", SppCommand.VCS, "/work", null, null)
+        assertEquals(listOf("vcs"), line.parametersList.list)
     }
 }
