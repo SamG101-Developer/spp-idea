@@ -35,6 +35,8 @@
         language="S++" implementationClass="com.intellij.lang.SppDocumentationProvider"/>
     <lang.foldingBuilder
         language="S++" implementationClass="com.intellij.lang.SppFoldingBuilder"/>
+    <statementUpDownMover
+        implementation="com.intellij.lang.SppStatementMover"/>
 
     <externalAnnotator
         language="S++" implementationClass="com.github.samg101developer.sppidea.diagnostics.SppExternalAnnotator"/>
