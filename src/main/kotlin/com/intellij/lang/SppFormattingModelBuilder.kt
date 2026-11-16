@@ -5,6 +5,7 @@ import com.intellij.lang.psi.SppTypes
 import com.intellij.psi.TokenType
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.common.AbstractBlock
+import com.intellij.psi.impl.source.tree.TreeUtil
 
 // Collection of all the binary operator types, for spacing
 // and indentation rules. The binary operators are split
@@ -54,6 +55,13 @@ private val BINARY_EXPR_TYPES = setOf(
 private val CHAIN_TYPES = mapOf(
   SppTypes.POSTFIX_EXPRESSION to SppTypes.POSTFIX_EXPRESSION_OP,
   SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION to SppTypes.ASSIGNMENT_TARGET_POSTFIX_EXPRESSION_OP,
+)
+
+// The "." and "::" access operators, which take no spaces
+// either side.
+private val ACCESS_OP_TOKENS = setOf(
+  SppTypes.TOKEN_DOT,
+  SppTypes.TOKEN_DOUBLE_COLON,
 )
 
 // Top level module members are split into "major" and "minor"
@@ -381,6 +389,18 @@ class SppBlock(
         1, 1, 0, true, 1
       )
     }
+
+    // Access operators ("." and "::", in expressions, use paths
+    // and types): no spaces on either side. A line break before
+    // the operator is kept, for chains continued on a new line.
+    val node1 = (child1 as? SppBlock)?.node
+    val node2 = (child2 as? SppBlock)?.node
+    if (node1 != null && TreeUtil.findLastLeaf(node1)?.elementType in ACCESS_OP_TOKENS) return Spacing.createSpacing(
+      0, 0, 0, false, 0
+    )
+    if (node2 != null && TreeUtil.findFirstLeaf(node2)?.elementType in ACCESS_OP_TOKENS) return Spacing.createSpacing(
+      0, 0, 0, true, 0
+    )
 
     // Binary operators: 1 space on either side
     if (node.elementType in BINARY_EXPR_TYPES && (t1 in BINARY_OP_TYPES || t2 in BINARY_OP_TYPES)) return Spacing.createSpacing(
