@@ -138,6 +138,8 @@ intellijPlatform {
 changelog {
     groups.empty()
     repositoryUrl = providers.gradleProperty("pluginRepositoryUrl")
+    // Release tags are the bare version (e.g. "0.5.1"), not "v0.5.1".
+    versionPrefix = ""
 }
 
 // Configure Gradle Kover Plugin - read more: https://kotlin.github.io/kotlinx-kover/gradle-plugin/#configuration-details
