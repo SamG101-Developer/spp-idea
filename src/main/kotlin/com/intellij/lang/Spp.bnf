@@ -130,8 +130,8 @@ class_member ::= class_attribute
 class_attribute ::= (annotation)* identifier token_colon type_expression class_attribute_default_value? {pin=2}
 class_attribute_default_value ::= token_assign expression
 
-sup_prototype_functions ::= keyword_sup generic_parameter_group? type_expression sup_implementation
-sup_prototype_extension ::= keyword_sup generic_parameter_group? type_expression keyword_ext type_expression sup_implementation
+sup_prototype_functions ::= (annotation)* keyword_sup generic_parameter_group? type_expression sup_implementation
+sup_prototype_extension ::= (annotation)* keyword_sup generic_parameter_group? type_expression keyword_ext type_expression sup_implementation
 sup_implementation ::= token_left_curly_brace (sup_member)* token_right_curly_brace
 sup_member ::= function_prototype | sup_type_statement | sup_cmp_statement
 sup_type_statement ::= (annotation)* type_statement
