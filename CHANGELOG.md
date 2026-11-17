@@ -3,5 +3,8 @@
 # spp-idea Changelog
 
 ## [Unreleased]
-### Added
-- Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
+
+### Fixed
+
+- Annotations before a `sup` block (both `sup Type { ... }` and `sup Type ext Base { ... }`) are now parsed instead of
+  being reported as syntax errors.
