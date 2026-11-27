@@ -26,7 +26,6 @@ private val BINARY_OP_TYPES = setOf(
   SppTypes.BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_10,
   // Type-level binary ops.
   SppTypes.TYPE_BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_0,
-  SppTypes.TYPE_BINARY_EXPRESSION_OP_PRECEDENCE_LEVEL_1,
 )
 
 // Collection of all the binary expression types, for spacing
@@ -46,7 +45,6 @@ private val BINARY_EXPR_TYPES = setOf(
   SppTypes.BINARY_EXPRESSION_PRECEDENCE_LEVEL_10,
   // Type-level binary expressions.
   SppTypes.TYPE_BINARY_EXPRESSION_PRECEDENCE_LEVEL_0,
-  SppTypes.TYPE_BINARY_EXPRESSION_PRECEDENCE_LEVEL_1,
 )
 
 // Collection of all the chainable expression types, which

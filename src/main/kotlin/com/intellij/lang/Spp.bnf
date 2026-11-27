@@ -410,10 +410,8 @@ global_cmp_statement ::= annotation* cmp_statement
 inner_scope_expression ::= token_left_curly_brace (statement)* token_right_curly_brace
 
 type_expression ::= type_never | type_parenthesised_expression | type_array_shorthand | type_tuple_shorthand | type_binary_expression_precedence_level_0
-type_binary_expression_precedence_level_0 ::= type_binary_expression_precedence_level_1 (type_binary_expression_op_precedence_level_0 type_binary_expression_precedence_level_0)*
-type_binary_expression_precedence_level_1 ::= type_postfix_expression (type_binary_expression_op_precedence_level_1 type_binary_expression_precedence_level_1)*
+type_binary_expression_precedence_level_0 ::= type_postfix_expression  (type_binary_expression_op_precedence_level_0 type_binary_expression_precedence_level_0)*
 type_binary_expression_op_precedence_level_0 ::= keyword_or
-type_binary_expression_op_precedence_level_1 ::= keyword_and
 
 type_unary_expression ::= type_unary_expression_operator_borrow? type_unary_expression_op* type_identifier
 type_unary_expression_op ::= type_unary_expression_operator_namespace
