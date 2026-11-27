@@ -59,7 +59,6 @@ interface SppTokenSets {
       SppTypes.KEYWORD_FALSE,
       SppTypes.KEYWORD_RES,
       SppTypes.KEYWORD_CAPS,
-      SppTypes.KEYWORD_DEFER
     )
 
     val OPERATORS: TokenSet = TokenSet.create(
